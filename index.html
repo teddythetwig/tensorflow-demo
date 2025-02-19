@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Joint Angle Detection</title>
+    <!-- Load TensorFlow.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+    <!-- Load pose detection model -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        .video-container {
+            width: 640px;
+            height: 480px;
+            border: 1px solid #ccc;
+            position: relative;
+        }
+        video {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Joint Angle Detection</h1>
+        <div class="video-container">
+            <video id="video" playsinline></video>
+            <canvas id="canvas"></canvas>
+        </div>
+        <table id="angleTable">
+            <thead>
+                <tr>
+                    <th>Joint</th>
+                    <th>Angle (degrees)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Left Shoulder</td>
+                    <td id="leftShoulder">0°</td>
+                </tr>
+                <tr>
+                    <td>Right Shoulder</td>
+                    <td id="rightShoulder">0°</td>
+                </tr>
+                <tr>
+                    <td>Left Elbow</td>
+                    <td id="leftElbow">0°</td>
+                </tr>
+                <tr>
+                    <td>Right Elbow</td>
+                    <td id="rightElbow">0°</td>
+                </tr>
+                <tr>
+                    <td>Left Wrist</td>
+                    <td id="leftWrist">0°</td>
+                </tr>
+                <tr>
+                    <td>Right Wrist</td>
+                    <td id="rightWrist">0°</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        class MovingAverage {
+            constructor(size = 15, staleDuration = 10000) { // staleDuration in ms
+                this.size = size;
+                this.values = [];
+                this.lastValidValue = null;
+                this.lastValidTimestamp = null;
+                this.staleDuration = staleDuration;
+            }
+            
+            update(newValue) {
+                const now = Date.now();
+                
+                if (newValue === null) {
+                    // Check if we have a last known value that's not too old
+                    if (this.lastValidValue !== null && 
+                        now - this.lastValidTimestamp < this.staleDuration) {
+                        return {
+                            value: this.lastValidValue,
+                            isStale: true
+                        };
+                    }
+                    return {
+                        value: null,
+                        isStale: false
+                    };
+                }
+
+                // We have a valid new value
+                this.values.push(newValue);
+                if (this.values.length > this.size) {
+                    this.values.shift();
+                }
+                
+                const averageValue = this.average();
+                this.lastValidValue = averageValue;
+                this.lastValidTimestamp = now;
+                
+                return {
+                    value: averageValue,
+                    isStale: false
+                };
+            }
+            
+            average() {
+                if (this.values.length === 0) return null;
+                const sum = this.values.reduce((a, b) => a + b, 0);
+                return Math.round(sum / this.values.length);
+            }
+        }
+
+        const smoothedAngles = {
+            leftShoulder: new MovingAverage(),
+            rightShoulder: new MovingAverage(),
+            leftElbow: new MovingAverage(),
+            rightElbow: new MovingAverage(),
+            leftWrist: new MovingAverage(),
+            rightWrist: new MovingAverage()
+        };
+
+        const connections = [
+            ['left_shoulder', 'right_shoulder'],
+            ['left_shoulder', 'left_elbow'],
+            ['right_shoulder', 'right_elbow'],
+            ['left_elbow', 'left_wrist'],
+            ['right_elbow', 'right_wrist'],
+            ['left_shoulder', 'left_hip'],
+            ['right_shoulder', 'right_hip'],
+            ['left_hip', 'right_hip'],
+            ['left_hip', 'left_knee'],
+            ['right_hip', 'right_knee'],
+            ['left_knee', 'left_ankle'],
+            ['right_knee', 'right_ankle']
+        ];
+
+        async function setupCamera() {
+            const video = document.getElementById('video');
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { width: 640, height: 480 }
+            });
+            video.srcObject = stream;
+            
+            return new Promise(resolve => {
+                video.onloadedmetadata = () => {
+                    video.play();
+                    resolve(video);
+                };
+            });
+        }
+
+        function calculateAngle(a, b, c) {
+            if (!a || !b || !c || a.score < 0.3 || b.score < 0.3 || c.score < 0.3) {
+                return null;  // Return null for invalid/unseen joints
+            }
+            
+            const radians = Math.atan2(c.y - b.y, c.x - b.x) - 
+                           Math.atan2(a.y - b.y, a.x - b.x);
+            let angle = Math.abs(radians * 180.0 / Math.PI);
+            
+            if (angle > 180.0) {
+                angle = 360 - angle;
+            }
+            return Math.round(angle);
+        }
+
+        function updateAngleDisplay(jointId, angleData) {
+            const element = document.getElementById(jointId);
+            if (element) {
+                if (angleData.value === null) {
+                    element.textContent = 'N/A';
+                    element.style.color = '';
+                } else {
+                    element.textContent = `${angleData.value}°`;
+                    element.style.color = angleData.isStale ? '#999' : '';
+                }
+            }
+        }
+
+        function drawSkeleton(keypoints, ctx) {
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            
+            // Draw connections
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            connections.forEach(([start, end]) => {
+                const startPoint = keypoints.find(kp => kp.name === start);
+                const endPoint = keypoints.find(kp => kp.name === end);
+                
+                if (startPoint && endPoint && startPoint.score > 0.3 && endPoint.score > 0.3) {
+                    ctx.beginPath();
+                    ctx.moveTo(startPoint.x, startPoint.y);
+                    ctx.lineTo(endPoint.x, endPoint.y);
+                    ctx.stroke();
+                }
+            });
+            
+            // Draw keypoints
+            keypoints.forEach(keypoint => {
+                if (keypoint.score > 0.3) {
+                    ctx.fillStyle = '#ff0000';
+                    ctx.beginPath();
+                    ctx.arc(keypoint.x, keypoint.y, 8, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            });
+        }
+
+        async function init() {
+            try {
+                await tf.ready();
+                
+                // Create detector with specific configuration
+                const model = poseDetection.SupportedModels.MoveNet;
+                const detector = await poseDetection.createDetector(model, {
+                    modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER,
+                    enableSmoothing: true,
+                    minPoseScore: 0.3
+                });
+
+                const video = await setupCamera();
+                
+                // Setup canvas with explicit dimensions
+                const canvas = document.getElementById('canvas');
+                canvas.width = 640;
+                canvas.height = 480;
+                const ctx = canvas.getContext('2d');
+
+                async function detectPose() {
+                    const poses = await detector.estimatePoses(video, {
+                        maxPoses: 1,
+                        flipHorizontal: false
+                    });
+                    
+                    if (poses.length > 0) {
+                        const keypoints = poses[0].keypoints;
+                        
+                        // Scale keypoints to canvas size
+                        const scaledKeypoints = keypoints.map(kp => ({
+                            ...kp,
+                            x: kp.x * (canvas.width / video.videoWidth),
+                            y: kp.y * (canvas.height / video.videoHeight)
+                        }));
+                        
+                        // Draw skeleton with scaled keypoints
+                        drawSkeleton(scaledKeypoints, ctx);
+                        
+                        const keypointDict = Object.fromEntries(
+                            scaledKeypoints.map(kp => [kp.name, kp])
+                        );
+
+                        // Calculate raw angles
+                        const rawAngles = {
+                            leftShoulder: calculateAngle(
+                                keypointDict['left_hip'],
+                                keypointDict['left_shoulder'],
+                                keypointDict['left_elbow']
+                            ),
+                            rightShoulder: calculateAngle(
+                                keypointDict['right_hip'],
+                                keypointDict['right_shoulder'],
+                                keypointDict['right_elbow']
+                            ),
+                            leftElbow: calculateAngle(
+                                keypointDict['left_shoulder'],
+                                keypointDict['left_elbow'],
+                                keypointDict['left_wrist']
+                            ),
+                            rightElbow: calculateAngle(
+                                keypointDict['right_shoulder'],
+                                keypointDict['right_elbow'],
+                                keypointDict['right_wrist']
+                            ),
+                            leftWrist: calculateAngle(
+                                keypointDict['left_elbow'],
+                                keypointDict['left_wrist'],
+                                keypointDict['left_pinky']
+                            ),
+                            rightWrist: calculateAngle(
+                                keypointDict['right_elbow'],
+                                keypointDict['right_wrist'],
+                                keypointDict['right_pinky']
+                            )
+                        };
+
+                        // Apply smoothing and update display
+                        Object.entries(rawAngles).forEach(([joint, angle]) => {
+                            const result = smoothedAngles[joint].update(angle);
+                            updateAngleDisplay(joint, result);
+                        });
+                    }
+                    
+                    requestAnimationFrame(detectPose);
+                }
+
+                detectPose();
+            } catch (error) {
+                console.error('Error initializing:', error);
+                alert('Error initializing pose detection: ' + error.message);
+            }
+        }
+
+        // Start the application when everything is loaded
+        window.onload = init;
+    </script>
+</body>
+</html>
