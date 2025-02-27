@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Alpha-Omega Elbow Angle Tracker</title>
+  <title>Alpha-Omega Left Elbow Angle Tracker</title>
   <!-- Load TensorFlow.js -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.11.0"></script>
   <!-- Load MoveNet model -->
@@ -26,19 +26,32 @@
       position: relative;
       width: 100%;
       margin-bottom: 20px;
+      aspect-ratio: 4/3;
+      overflow: hidden;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
     }
     
     #webcam {
+      position: absolute;
+      top: 0;
+      left: 0;
       width: 100%;
-      display: none;
+      height: 100%;
+      object-fit: cover;
       transform: scaleX(-1);
+      background-color: #000;
+      z-index: 1;
     }
     
     #canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
       width: 100%;
-      background-color: #000;
-      border-radius: 8px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+      height: 100%;
+      z-index: 2;
+      background-color: transparent;
     }
     
     .controls {
@@ -206,101 +219,38 @@
     .preset-button:hover {
       background-color: #4a4a4a;
     }
-    
-    .switch-container {
-      display: flex;
-      align-items: center;
-      margin: 16px 0;
-    }
-    
-    .switch-label {
-      margin-right: 10px;
-      font-weight: bold;
-    }
-    
-    .switch {
-      position: relative;
-      display: inline-block;
-      width: 60px;
-      height: 34px;
-    }
-    
-    .switch input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-    
-    .slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: #3a3a3a;
-      transition: .4s;
-      border-radius: 34px;
-    }
-    
-    .slider:before {
-      position: absolute;
-      content: "";
-      height: 26px;
-      width: 26px;
-      left: 4px;
-      bottom: 4px;
-      background-color: white;
-      transition: .4s;
-      border-radius: 50%;
-    }
-    
-    input:checked + .slider {
-      background-color: #3b82f6;
-    }
-    
-    input:checked + .slider:before {
-      transform: translateX(26px);
-    }
-    
-    .angle-type {
-      margin-left: 10px;
-      font-size: 14px;
-      color: #aaa;
-    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>Alpha-Omega Elbow Angle Tracker</h2>
+    <h2>Alpha-Omega Left Elbow Angle Tracker</h2>
     
     <!-- Angle Range Controls -->
     <div class="angle-controls">
       <h3>Movement Range Settings</h3>
       
       <div class="angle-control">
-        <label for="alpha-angle">Alpha (Starting Angle): <span id="alpha-angle-value">45</span>°</label>
+        <label for="alpha-angle">Alpha (Starting Angle): <span id="alpha-angle-value">160</span>°</label>
         <div class="slider-container">
-          <input type="range" id="alpha-angle" min="0" max="180" value="45" step="1">
-          <input type="number" id="alpha-angle-input" min="0" max="180" value="45">
+          <input type="range" id="alpha-angle" min="0" max="180" value="160" step="1">
+          <input type="number" id="alpha-angle-input" min="0" max="180" value="160">
         </div>
       </div>
       
       <div class="angle-control">
-        <label for="omega-angle">Omega (Ending Angle): <span id="omega-angle-value">160</span>°</label>
+        <label for="omega-angle">Omega (Ending Angle): <span id="omega-angle-value">45</span>°</label>
         <div class="slider-container">
-          <input type="range" id="omega-angle" min="0" max="180" value="160" step="1">
-          <input type="number" id="omega-angle-input" min="0" max="180" value="160">
+          <input type="range" id="omega-angle" min="0" max="180" value="45" step="1">
+          <input type="number" id="omega-angle-input" min="0" max="180" value="45">
         </div>
       </div>
       
-      <div class="switch-container">
-        <span class="switch-label">Angle Type:</span>
-        <label class="switch">
-          <input type="checkbox" id="angle-type-switch">
-          <span class="slider"></span>
-        </label>
-        <span class="angle-type" id="angle-type-text">Interior Angle</span>
+      <div class="angle-control">
+        <label for="angle-tolerance">Rep Detection Tolerance: <span id="angle-tolerance-value">10</span>°</label>
+        <div class="slider-container">
+          <input type="range" id="angle-tolerance" min="1" max="30" value="10" step="1">
+          <input type="number" id="angle-tolerance-input" min="1" max="30" value="10">
+        </div>
       </div>
       
       <div class="presets">
@@ -339,7 +289,12 @@
         
         <div class="metric">
           <div class="metric-label">Target Movement</div>
-          <div id="target-range" class="metric-value">45° → 160°</div>
+          <div id="target-range" class="metric-value">160° → 45°</div>
+        </div>
+        
+        <div class="metric">
+          <div class="metric-label">Reps Completed</div>
+          <div id="rep-counter" class="metric-value">0</div>
         </div>
       </div>
       
@@ -347,7 +302,7 @@
         <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
       </div>
       
-      <p class="note">Move your arm between the Alpha and Omega angles. Stay within the blue target arc.</p>
+      <p class="note">Move your left arm between the Alpha and Omega angles. Stay within the blue target arc.</p>
     </div>
   </div>
 
@@ -370,20 +325,51 @@
     const omegaAngleInput = document.getElementById('omega-angle-input');
     const alphaAngleValue = document.getElementById('alpha-angle-value');
     const omegaAngleValue = document.getElementById('omega-angle-value');
-    const angleTypeSwitch = document.getElementById('angle-type-switch');
-    const angleTypeText = document.getElementById('angle-type-text');
     const presetButtons = document.querySelectorAll('.preset-button');
+    
+    // Add variable for tolerance
+    let angleTolerance = 10; // Default tolerance in degrees
+    
+    // Add the tolerance control elements
+    const angleToleranceSlider = document.getElementById('angle-tolerance');
+    const angleToleranceInput = document.getElementById('angle-tolerance-input');
+    const angleToleranceValue = document.getElementById('angle-tolerance-value');
+    
+    // Setup tolerance control event listeners
+    angleToleranceSlider.addEventListener('input', function() {
+      const value = parseInt(this.value);
+      angleTolerance = value;
+      angleToleranceValue.textContent = value;
+      angleToleranceInput.value = value;
+    });
+    
+    angleToleranceInput.addEventListener('change', function() {
+      const value = parseInt(this.value);
+      
+      // Validate input
+      if (isNaN(value) || value < 1) {
+        this.value = 1;
+        angleTolerance = 1;
+      } else if (value > 30) {
+        this.value = 30;
+        angleTolerance = 30;
+      } else {
+        angleTolerance = value;
+      }
+      
+      angleToleranceSlider.value = angleTolerance;
+      angleToleranceValue.textContent = angleTolerance;
+    });
     
     // Tracking state
     let detector;
     let elbowAngle = 0;
     let inTargetRange = false;
     let isRunning = false;
-    let useInteriorAngle = true; // Default to interior angle
     
     // Define target angle range (alpha to omega)
-    let alphaAngle = 45; // Starting angle
-    let omegaAngle = 160; // Ending angle
+    let alphaAngle = 160; // Starting angle
+    let omegaAngle = 45; // Ending angle
     
     // Update target range display
     function updateTargetRangeDisplay() {
@@ -391,12 +377,6 @@
     }
     
     updateTargetRangeDisplay();
-    
-    // Setup angle type switch
-    angleTypeSwitch.addEventListener('change', function() {
-      useInteriorAngle = !this.checked;
-      angleTypeText.textContent = useInteriorAngle ? "Interior Angle" : "Exterior Angle";
-    });
     
     // Setup angle control event listeners
     alphaAngleSlider.addEventListener('input', function() {
@@ -542,11 +522,6 @@
       // Convert to degrees
       let angleDegrees = Math.acos(Math.max(-1, Math.min(1, cosAngle))) * (180 / Math.PI);
       
-      // If exterior angle is requested, calculate 360 - interior angle
-      if (!useInteriorAngle) {
-        angleDegrees = 360 - angleDegrees;
-      }
-      
       return angleDegrees;
     }
     
@@ -603,145 +578,51 @@
       const upperArmAngle = getAngleRadians(upperArmVector.x, upperArmVector.y);
       const forearmAngle = getAngleRadians(forearmVector.x, forearmVector.y);
       
-      // Convert alpha and omega to radians
-      const alphaRad = (alphaAngle * Math.PI) / 180;
-      const omegaRad = (omegaAngle * Math.PI) / 180;
-      
       // Radius for drawing arcs
       const radius = 50;
       
-      // Draw the current angle arc (green when in range, orange when out)
+      // Recalculate target arc angles correctly
+      // Map anatomical angles (0-180°) to actual forearm positions
+      // When elbow = 180° (straight arm), forearm is opposite upper arm 
+      // When elbow = 0° (fully bent), forearm is parallel to upper arm
+      const alphaArcAngle = upperArmAngle + (Math.PI * (180 - alphaAngle) / 180);
+      const omegaArcAngle = upperArmAngle + (Math.PI * (180 - omegaAngle) / 180);
+      
+      // Calculate the absolute angular difference
+      const angleDiff = Math.abs(alphaArcAngle - omegaArcAngle);
+      // Determine if we need to draw the minor arc
+      const useMinorArc = angleDiff > Math.PI;
+      
+      // Draw target range arc
       ctx.beginPath();
-      
-      if (useInteriorAngle) {
-        // Draw interior angle from upper arm to forearm
-        ctx.arc(elbow.x, elbow.y, radius, upperArmAngle, forearmAngle, false);
-      } else {
-        // Draw exterior angle from upper arm to forearm (the "other way around")
-        ctx.arc(elbow.x, elbow.y, radius, upperArmAngle, forearmAngle, true);
-      }
-      
-      // Style based on whether angle is in target range
-      if (inTargetRange) {
-        ctx.strokeStyle = 'rgba(0, 255, 0, 0.7)'; // Green when in range
-        ctx.fillStyle = 'rgba(0, 255, 0, 0.3)';
-      } else {
-        ctx.strokeStyle = 'rgba(255, 165, 0, 0.7)'; // Orange when out of range
-        ctx.fillStyle = 'rgba(255, 165, 0, 0.3)';
-      }
-      
-      ctx.lineWidth = 6;
+      ctx.arc(
+        elbow.x, 
+        elbow.y, 
+        radius + 10, 
+        alphaArcAngle, 
+        omegaArcAngle, 
+        // This ensures we always draw the minor (smaller) arc
+        useMinorArc ? (alphaArcAngle < omegaArcAngle) : (alphaArcAngle > omegaArcAngle)
+      );
+      ctx.strokeStyle = 'rgba(100, 100, 255, 0.6)';
+      ctx.lineWidth = 10;
       ctx.stroke();
-      ctx.fill();
-      
-      
-      // For interior angle measurements
-      if (useInteriorAngle) {
-        // Calculate reference angle (usually the upper arm)
-        const refAngle = upperArmAngle;
-        
-        // Map alpha and omega to actual arc angles
-        // For interior angles: we need to calculate offset from the reference angle
-        let alphaArcAngle, omegaArcAngle;
-        
-        // Convert alpha/omega from degrees to actual arc angles
-        // For interior angle, subtract the angle from PI + refAngle
-        alphaArcAngle = (Math.PI + refAngle) - (alphaAngle * Math.PI / 180);
-        omegaArcAngle = (Math.PI + refAngle) - (omegaAngle * Math.PI / 180);
-        
-        // Calculate the absolute angular difference
-        const angleDiff = Math.abs(alphaArcAngle - omegaArcAngle);
-        // Determine if we need to draw the minor arc
-        const useMinorArc = angleDiff > Math.PI;
-        
-        // Draw target range arc
-        ctx.beginPath();
-        // Use counterclockwise arc direction if alpha < omega, clockwise if alpha > omega
-        ctx.arc(
-          elbow.x, 
-          elbow.y, 
-          radius + 10, 
-          alphaArcAngle, 
-          omegaArcAngle, 
-          // This ensures we always draw the minor (smaller) arc
-          useMinorArc ? (alphaArcAngle < omegaArcAngle) : (alphaArcAngle > omegaArcAngle)
-        );
-        ctx.strokeStyle = 'rgba(100, 100, 255, 0.6)';
-        ctx.lineWidth = 10;
-        ctx.stroke();
-      }
-      // For exterior angle measurements
-      else {
-        // Calculate reference angle (usually the upper arm)
-        const refAngle = upperArmAngle;
-        
-        // Map alpha and omega to actual arc angles
-        // For exterior angles: we add the angle to the reference angle
-        let alphaArcAngle, omegaArcAngle;
-        
-        // Convert alpha/omega from degrees to actual arc angles
-        // For exterior angle, add the angle to refAngle
-        alphaArcAngle = refAngle + (alphaAngle * Math.PI / 180);
-        omegaArcAngle = refAngle + (omegaAngle * Math.PI / 180);
-        
-        // Calculate the absolute angular difference
-        const angleDiff = Math.abs(alphaArcAngle - omegaArcAngle);
-        // Determine if we need to draw the minor arc
-        const useMinorArc = angleDiff > Math.PI;
-        
-        // Draw target range arc
-        ctx.beginPath();
-        // Use counterclockwise arc direction if alpha > omega, clockwise if alpha < omega
-        // (opposite of interior because exterior angles work in reverse)
-        ctx.arc(
-          elbow.x, 
-          elbow.y, 
-          radius + 10, 
-          alphaArcAngle, 
-          omegaArcAngle, 
-          // This ensures we always draw the minor (smaller) arc
-          useMinorArc ? (alphaArcAngle < omegaArcAngle) : (alphaArcAngle > omegaArcAngle)
-        );
-        ctx.strokeStyle = 'rgba(100, 100, 255, 0.6)';
-        ctx.lineWidth = 10;
-        ctx.stroke();
-      }
       
       // Draw angle text
       ctx.font = '20px Arial';
       ctx.fillStyle = 'white';
       ctx.fillText(`${Math.round(angle)}°`, elbow.x + 20, elbow.y - 20);
       
-      // Calculate positions for alpha/omega labels - depends on the angle type
-      let alphaTextPos, omegaTextPos;
+      // Calculate positions for alpha/omega labels
+      let alphaTextPos = {
+        x: elbow.x + (radius + 30) * Math.cos(alphaArcAngle),
+        y: elbow.y + (radius + 30) * Math.sin(alphaArcAngle)
+      };
       
-      if (useInteriorAngle) {
-        const alphaArcAngle = (Math.PI + upperArmAngle) - (alphaAngle * Math.PI / 180);
-        const omegaArcAngle = (Math.PI + upperArmAngle) - (omegaAngle * Math.PI / 180);
-        
-        alphaTextPos = {
-          x: elbow.x + (radius + 30) * Math.cos(alphaArcAngle),
-          y: elbow.y + (radius + 30) * Math.sin(alphaArcAngle)
-        };
-        
-        omegaTextPos = {
-          x: elbow.x + (radius + 30) * Math.cos(omegaArcAngle),
-          y: elbow.y + (radius + 30) * Math.sin(omegaArcAngle)
-        };
-      } else {
-        const alphaArcAngle = upperArmAngle + (alphaAngle * Math.PI / 180);
-        const omegaArcAngle = upperArmAngle + (omegaAngle * Math.PI / 180);
-        
-        alphaTextPos = {
-          x: elbow.x + (radius + 30) * Math.cos(alphaArcAngle),
-          y: elbow.y + (radius + 30) * Math.sin(alphaArcAngle)
-        };
-        
-        omegaTextPos = {
-          x: elbow.x + (radius + 30) * Math.cos(omegaArcAngle),
-          y: elbow.y + (radius + 30) * Math.sin(omegaArcAngle)
-        };
-      }
+      let omegaTextPos = {
+        x: elbow.x + (radius + 30) * Math.cos(omegaArcAngle),
+        y: elbow.y + (radius + 30) * Math.sin(omegaArcAngle)
+      };
       
       ctx.font = '16px Arial';
       ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
@@ -821,7 +702,7 @@
         ctx.font = '24px Arial';
         ctx.fillStyle = 'white';
         ctx.textAlign = 'center';
-        ctx.fillText('Position your right arm clearly in view', canvasWidth / 2, canvasHeight / 2);
+        ctx.fillText('Position your left arm clearly in view', canvasWidth / 2, canvasHeight / 2);
       }
     }
     
@@ -844,6 +725,24 @@
       // Update progress bar based on movement from alpha to omega
       const progressPercentage = getProgressPercentage(elbowAngle, alphaAngle, omegaAngle);
       progressFillEl.style.width = `${progressPercentage}%`;
+      
+      // REP COUNTING LOGIC
+      const isAtAlpha = isAngleCloseToTarget(elbowAngle, alphaAngle, angleTolerance); // Use variable tolerance
+      const isAtOmega = isAngleCloseToTarget(elbowAngle, omegaAngle, angleTolerance); // Use variable tolerance
+      
+      // If we're at omega and haven't counted this rep yet, and we're ready for next rep
+      if (isAtOmega && !hasReachedOmega && isReadyForNextRep) {
+        hasReachedOmega = true;
+        repCount++;
+        updateRepCounter();
+        isReadyForNextRep = false; // Now we need to go back to alpha
+      }
+      
+      // If we're back at alpha after reaching omega, we're ready for the next rep
+      if (isAtAlpha && hasReachedOmega && !isReadyForNextRep) {
+        isReadyForNextRep = true;
+        hasReachedOmega = false; // Reset for next rep
+      }
     }
     
     // Main detection and rendering loop
@@ -855,7 +754,7 @@
         canvasEl.width = webcamEl.width;
         canvasEl.height = webcamEl.height;
         
-        // Clear the canvas
+        // Clear the canvas with transparent background
         ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
         
         // Detect poses
@@ -903,9 +802,9 @@
         statusMessageEl.textContent = 'Loading pose detection model...';
         detector = await loadPoseDetectionModel();
         
-        // Hide loading screen, show webcam
+        // Hide loading screen, show webcam (don't hide it anymore)
         loadingEl.style.display = 'none';
-        webcamEl.style.display = 'block';
+        webcamEl.style.display = 'block'; // Make sure webcam is visible
         
         // Start the detection loop
         isRunning = true;
@@ -930,6 +829,14 @@
         statusMessageEl.textContent = 'Ready to start. Click the button below.';
         startButtonEl.style.display = 'block';
         startButtonEl.addEventListener('click', startTracking);
+        
+        // Initialize rep counter variables
+        repCount = 0;
+        isReadyForNextRep = true; // Start ready for first rep
+        hasReachedOmega = false;
+        
+        // Update rep counter display
+        updateRepCounter();
       } catch (error) {
         console.error('Initialization error:', error);
         statusMessageEl.textContent = 'Initialization error: ' + error.message;
@@ -938,6 +845,16 @@
     
     // Start when page is loaded
     window.onload = init;
+
+    // Helper function to check if an angle is within a certain range of a target
+    function isAngleCloseToTarget(angle, target, tolerance) {
+      return Math.abs(angle - target) <= tolerance;
+    }
+
+    // Function to update the rep counter display
+    function updateRepCounter() {
+      document.getElementById('rep-counter').textContent = repCount;
+    }
   </script>
 </body>
 </html>
