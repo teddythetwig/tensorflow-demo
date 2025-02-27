@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Elbow Angle Tracker</title>
+  <!-- Load TensorFlow.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.11.0"></script>
+  <!-- Load MoveNet model -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@0.0.6"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #1a1a1a;
+      color: white;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    .video-container {
+      position: relative;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+    
+    #webcam {
+      width: 100%;
+      display: none;
+    }
+    
+    #canvas {
+      width: 100%;
+      background-color: #000;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+    
+    .controls {
+      background-color: #2a2a2a;
+      padding: 16px;
+      border-radius: 8px;
+      margin-top: 16px;
+    }
+    
+    .controls h3 {
+      margin-top: 0;
+      margin-bottom: 16px;
+      font-size: 18px;
+    }
+    
+    .metrics {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    
+    .metric {
+      text-align: left;
+    }
+    
+    .metric-label {
+      font-size: 12px;
+      color: #aaa;
+      margin-bottom: 4px;
+    }
+    
+    .metric-value {
+      font-size: 24px;
+      font-weight: bold;
+    }
+    
+    .metric-value.in-range {
+      color: #4ade80;
+    }
+    
+    .metric-value.out-range {
+      color: #fbbf24;
+    }
+    
+    .progress-bar {
+      width: 100%;
+      height: 24px;
+      background-color: #3a3a3a;
+      border-radius: 9999px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(to right, #3b82f6, #4ade80);
+      transition: width 0.3s ease-in-out;
+    }
+    
+    .note {
+      font-size: 12px;
+      color: #aaa;
+    }
+    
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 300px;
+      background-color: #1a1a1a;
+      margin-bottom: 20px;
+      border-radius: 8px;
+    }
+    
+    .loading-icon {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 12px;
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top: 4px solid #fff;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    #status-message {
+      margin-top: 10px;
+      text-align: center;
+    }
+
+    button {
+      background-color: #3b82f6;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background-color: #2563eb;
+    }
+    
+    .angle-controls {
+      background-color: #2a2a2a;
+      padding: 16px;
+      border-radius: 8px;
+      margin-top: 16px;
+      margin-bottom: 16px;
+    }
+    
+    .angle-control {
+      margin-bottom: 10px;
+    }
+    
+    .angle-control label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    
+    .slider-container {
+      display: flex;
+      align-items: center;
+    }
+    
+    .slider-container input[type="range"] {
+      flex-grow: 1;
+      margin-right: 10px;
+    }
+    
+    .slider-container input[type="number"] {
+      width: 60px;
+      background-color: #3a3a3a;
+      color: white;
+      border: 1px solid #555;
+      border-radius: 4px;
+      padding: 5px;
+    }
+    
+    .presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    
+    .preset-button {
+      background-color: #3a3a3a;
+      border: 1px solid #555;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    .preset-button:hover {
+      background-color: #4a4a4a;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Adjustable Elbow Angle Tracker</h2>
+    
+    <!-- Angle Range Controls -->
+    <div class="angle-controls">
+      <h3>Target Angle Settings</h3>
+      
+      <div class="angle-control">
+        <label for="min-angle">Alpha (Minimum Angle): <span id="min-angle-value">45</span>°</label>
+        <div class="slider-container">
+          <input type="range" id="min-angle" min="0" max="180" value="45" step="1">
+          <input type="number" id="min-angle-input" min="0" max="180" value="45">
+        </div>
+      </div>
+      
+      <div class="angle-control">
+        <label for="max-angle">Omega (Maximum Angle): <span id="max-angle-value">160</span>°</label>
+        <div class="slider-container">
+          <input type="range" id="max-angle" min="0" max="180" value="160" step="1">
+          <input type="number" id="max-angle-input" min="0" max="180" value="160">
+        </div>
+      </div>
+      
+      <div class="presets">
+        <button class="preset-button" data-min="30" data-max="90">Beginner (30°-90°)</button>
+        <button class="preset-button" data-min="45" data-max="135">Intermediate (45°-135°)</button>
+        <button class="preset-button" data-min="45" data-max="160">Advanced (45°-160°)</button>
+        <button class="preset-button" data-min="90" data-max="180">Straight Extension (90°-180°)</button>
+        <button class="preset-button" data-min="10" data-max="90">Deep Flex (10°-90°)</button>
+      </div>
+    </div>
+    
+    <div id="loading" class="loading">
+      <div class="loading-icon"></div>
+      <p id="status-message">Loading TensorFlow.js...</p>
+      <button id="start-button" style="display: none;">Start Tracking</button>
+    </div>
+    
+    <div class="video-container">
+      <video id="webcam" autoplay playsinline></video>
+      <canvas id="canvas"></canvas>
+    </div>
+    
+    <div class="controls">
+      <h3>Elbow Extension Tracker</h3>
+      
+      <div class="metrics">
+        <div class="metric">
+          <div class="metric-label">Current Angle</div>
+          <div id="current-angle" class="metric-value">0°</div>
+        </div>
+        
+        <div class="metric">
+          <div class="metric-label">Status</div>
+          <div id="status" class="metric-value out-range">Outside Target Range</div>
+        </div>
+        
+        <div class="metric">
+          <div class="metric-label">Target Range</div>
+          <div id="target-range" class="metric-value">45° - 160°</div>
+        </div>
+      </div>
+      
+      <div class="progress-bar">
+        <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+      </div>
+      
+      <p class="note">Move your arm to adjust the elbow angle. Stay within the blue target arc.</p>
+    </div>
+  </div>
+
+  <script>
+    // DOM Elements
+    const webcamEl = document.getElementById('webcam');
+    const canvasEl = document.getElementById('canvas');
+    const loadingEl = document.getElementById('loading');
+    const startButtonEl = document.getElementById('start-button');
+    const statusMessageEl = document.getElementById('status-message');
+    const currentAngleEl = document.getElementById('current-angle');
+    const statusEl = document.getElementById('status');
+    const targetRangeEl = document.getElementById('target-range');
+    const progressFillEl = document.getElementById('progress-fill');
+    
+    // Angle control elements
+    const minAngleSlider = document.getElementById('min-angle');
+    const maxAngleSlider = document.getElementById('max-angle');
+    const minAngleInput = document.getElementById('min-angle-input');
+    const maxAngleInput = document.getElementById('max-angle-input');
+    const minAngleValue = document.getElementById('min-angle-value');
+    const maxAngleValue = document.getElementById('max-angle-value');
+    const presetButtons = document.querySelectorAll('.preset-button');
+    
+    // Tracking state
+    let detector;
+    let elbowAngle = 0;
+    let inTargetRange = false;
+    let isRunning = false;
+    
+    // Define target angle range (alpha to omega)
+    let minTargetAngle = 45; // Alpha - minimum acceptable angle
+    let maxTargetAngle = 160; // Omega - maximum acceptable angle
+    
+    // Update target range display
+    function updateTargetRangeDisplay() {
+      targetRangeEl.textContent = `${minTargetAngle}° - ${maxTargetAngle}°`;
+    }
+    
+    updateTargetRangeDisplay();
+    
+    // Setup angle control event listeners
+    minAngleSlider.addEventListener('input', function() {
+      const value = parseInt(this.value);
+      minTargetAngle = value;
+      minAngleValue.textContent = value;
+      minAngleInput.value = value;
+      
+      // Ensure min doesn't exceed max
+      if (value >= maxTargetAngle) {
+        maxTargetAngle = value + 1;
+        maxAngleSlider.value = maxTargetAngle;
+        maxAngleValue.textContent = maxTargetAngle;
+        maxAngleInput.value = maxTargetAngle;
+      }
+      
+      updateTargetRangeDisplay();
+    });
+    
+    maxAngleSlider.addEventListener('input', function() {
+      const value = parseInt(this.value);
+      maxTargetAngle = value;
+      maxAngleValue.textContent = value;
+      maxAngleInput.value = value;
+      
+      // Ensure max doesn't go below min
+      if (value <= minTargetAngle) {
+        minTargetAngle = value - 1;
+        minAngleSlider.value = minTargetAngle;
+        minAngleValue.textContent = minTargetAngle;
+        minAngleInput.value = minTargetAngle;
+      }
+      
+      updateTargetRangeDisplay();
+    });
+    
+    minAngleInput.addEventListener('change', function() {
+      const value = parseInt(this.value);
+      
+      // Validate input
+      if (isNaN(value) || value < 0) {
+        this.value = 0;
+        minTargetAngle = 0;
+      } else if (value > 180) {
+        this.value = 180;
+        minTargetAngle = 180;
+      } else {
+        minTargetAngle = value;
+      }
+      
+      minAngleSlider.value = minTargetAngle;
+      minAngleValue.textContent = minTargetAngle;
+      
+      // Ensure min doesn't exceed max
+      if (minTargetAngle >= maxTargetAngle) {
+        maxTargetAngle = minTargetAngle + 1;
+        if (maxTargetAngle > 180) {
+          maxTargetAngle = 180;
+          minTargetAngle = 179;
+          minAngleSlider.value = minTargetAngle;
+          minAngleValue.textContent = minTargetAngle;
+          this.value = minTargetAngle;
+        }
+        maxAngleSlider.value = maxTargetAngle;
+        maxAngleValue.textContent = maxTargetAngle;
+        maxAngleInput.value = maxTargetAngle;
+      }
+      
+      updateTargetRangeDisplay();
+    });
+    
+    maxAngleInput.addEventListener('change', function() {
+      const value = parseInt(this.value);
+      
+      // Validate input
+      if (isNaN(value) || value < 0) {
+        this.value = 0;
+        maxTargetAngle = 0;
+      } else if (value > 180) {
+        this.value = 180;
+        maxTargetAngle = 180;
+      } else {
+        maxTargetAngle = value;
+      }
+      
+      maxAngleSlider.value = maxTargetAngle;
+      maxAngleValue.textContent = maxTargetAngle;
+      
+      // Ensure max doesn't go below min
+      if (maxTargetAngle <= minTargetAngle) {
+        minTargetAngle = maxTargetAngle - 1;
+        if (minTargetAngle < 0) {
+          minTargetAngle = 0;
+          maxTargetAngle = 1;
+          maxAngleSlider.value = maxTargetAngle;
+          maxAngleValue.textContent = maxTargetAngle;
+          this.value = maxTargetAngle;
+        }
+        minAngleSlider.value = minTargetAngle;
+        minAngleValue.textContent = minTargetAngle;
+        minAngleInput.value = minTargetAngle;
+      }
+      
+      updateTargetRangeDisplay();
+    });
+    
+    // Setup preset buttons
+    presetButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        const min = parseInt(this.getAttribute('data-min'));
+        const max = parseInt(this.getAttribute('data-max'));
+        
+        minTargetAngle = min;
+        maxTargetAngle = max;
+        
+        minAngleSlider.value = min;
+        maxAngleSlider.value = max;
+        minAngleInput.value = min;
+        maxAngleInput.value = max;
+        minAngleValue.textContent = min;
+        maxAngleValue.textContent = max;
+        
+        updateTargetRangeDisplay();
+      });
+    });
+    
+    // Canvas setup
+    const ctx = canvasEl.getContext('2d');
+    
+    // Initialize the webcam
+    async function setupWebcam() {
+      return new Promise((resolve, reject) => {
+        navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: 'user',
+            width: { ideal: 640 },
+            height: { ideal: 480 }
+          }
+        })
+        .then(stream => {
+          webcamEl.srcObject = stream;
+          webcamEl.onloadedmetadata = () => {
+            webcamEl.width = webcamEl.videoWidth;
+            webcamEl.height = webcamEl.videoHeight;
+            resolve(webcamEl);
+          };
+        })
+        .catch(error => {
+          statusMessageEl.textContent = 'Error accessing webcam: ' + error.message;
+          reject(error);
+        });
+      });
+    }
+    
+    // Load the pose detection model - using MoveNet which is more reliable in browsers
+    async function loadPoseDetectionModel() {
+      try {
+        // Use MoveNet SinglePose - more reliable than BlazePose in browser environments
+        const model = poseDetection.SupportedModels.MoveNet;
+        const detectorConfig = {
+          modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
+          enableSmoothing: true
+        };
+        
+        return await poseDetection.createDetector(model, detectorConfig);
+      } catch (error) {
+        console.error('Error loading model:', error);
+        statusMessageEl.textContent = 'Error loading model: ' + error.message;
+        throw error;
+      }
+    }
+    
+    // Calculate angle between three points
+    function calculateAngle(a, b, c) {
+      // Vector BA
+      const ba = { x: a.x - b.x, y: a.y - b.y };
+      // Vector BC
+      const bc = { x: c.x - b.x, y: c.y - b.y };
+      
+      // Dot product and magnitudes
+      const dotProduct = ba.x * bc.x + ba.y * bc.y;
+      const baMagnitude = Math.sqrt(ba.x * ba.x + ba.y * ba.y);
+      const bcMagnitude = Math.sqrt(bc.x * bc.x + bc.y * bc.y);
+      
+      // Cosine of angle
+      const cosAngle = dotProduct / (baMagnitude * bcMagnitude);
+      
+      // Convert to degrees
+      const angleRadians = Math.acos(Math.max(-1, Math.min(1, cosAngle)));
+      return angleRadians * (180 / Math.PI);
+    }
+    
+    // Find angle in radians on the unit circle
+    function getAngleRadians(x, y) {
+      return Math.atan2(y, x);
+    }
+    
+    // Draw angle visualization
+    function drawAngleVisualization(ctx, shoulder, elbow, wrist, angle) {
+      // Calculate vectors
+      const upperArmVector = { 
+        x: shoulder.x - elbow.x, 
+        y: shoulder.y - elbow.y 
+      };
+      const forearmVector = { 
+        x: wrist.x - elbow.x, 
+        y: wrist.y - elbow.y 
+      };
+      
+      // Get the angle of upper arm in radians (reference angle)
+      const upperArmAngle = getAngleRadians(upperArmVector.x, upperArmVector.y);
+      
+      // Get angle of forearm in radians
+      const forearmAngle = getAngleRadians(forearmVector.x, forearmVector.y);
+      
+      // Calculate the angles for the target range relative to upper arm
+      // We're using 180-angle because we want the interior angle, not the exterior
+      const piRad = Math.PI;
+      
+      // Fixed version - correctly map the angle values to arc angles
+      // Convert the min/max target angles to radians
+      const minTargetRad = (minTargetAngle * Math.PI) / 180;
+      const maxTargetRad = (maxTargetAngle * Math.PI) / 180;
+      
+      // Calculate the start/end angles for drawing the arc
+      // These calculations correctly map min/max angles to the visual arc
+      // We subtract from (upperArmAngle + Math.PI) to get interior angles
+      const startArcAngle = (upperArmAngle + Math.PI) - minTargetRad;
+      const endArcAngle = (upperArmAngle + Math.PI) - maxTargetRad;
+      
+      // Draw the current angle arc
+      const radius = 50;
+      
+      // Draw angle arc for current position
+      ctx.beginPath();
+      ctx.arc(elbow.x, elbow.y, radius, upperArmAngle, forearmAngle, false);
+      
+      // Style based on whether angle is in target range
+      if (inTargetRange) {
+        ctx.strokeStyle = 'rgba(0, 255, 0, 0.7)'; // Green when in range
+        ctx.fillStyle = 'rgba(0, 255, 0, 0.3)';
+      } else {
+        ctx.strokeStyle = 'rgba(255, 165, 0, 0.7)'; // Orange when out of range
+        ctx.fillStyle = 'rgba(255, 165, 0, 0.3)';
+      }
+      
+      ctx.lineWidth = 6;
+      ctx.stroke();
+      ctx.fill();
+      
+      // Draw target range arc - FIXED to correctly show the target range
+      ctx.beginPath();
+      ctx.arc(elbow.x, elbow.y, radius + 10, startArcAngle, endArcAngle, false);
+      ctx.strokeStyle = 'rgba(100, 100, 255, 0.6)';
+      ctx.lineWidth = 10;
+      ctx.stroke();
+      
+      // Draw angle text
+      ctx.font = '20px Arial';
+      ctx.fillStyle = 'white';
+      ctx.fillText(`${Math.round(angle)}°`, elbow.x + 20, elbow.y - 20);
+      
+      // Calculate positions for min/max labels
+      // Use the corrected arc angles for label positioning
+      const minTextPos = {
+        x: elbow.x + (radius + 30) * Math.cos(startArcAngle),
+        y: elbow.y + (radius + 30) * Math.sin(startArcAngle)
+      };
+      
+      const maxTextPos = {
+        x: elbow.x + (radius + 30) * Math.cos(endArcAngle),
+        y: elbow.y + (radius + 30) * Math.sin(endArcAngle)
+      };
+      
+      ctx.font = '16px Arial';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.fillText(`${minTargetAngle}°`, minTextPos.x, minTextPos.y);
+      ctx.fillText(`${maxTargetAngle}°`, maxTextPos.x, maxTextPos.y);
+    }
+    
+    // Draw results on canvas
+    function drawResults(ctx, poses, videoWidth, videoHeight) {
+      // Clear the canvas
+      ctx.clearRect(0, 0, videoWidth, videoHeight);
+      
+      if (!poses || poses.length === 0) {
+        ctx.font = '24px Arial';
+        ctx.fillStyle = 'white';
+        ctx.textAlign = 'center';
+        ctx.fillText('No poses detected. Make sure your body is visible.', videoWidth / 2, videoHeight / 2);
+        return;
+      }
+      
+      // Get the first detected pose
+      const pose = poses[0];
+      
+      // MoveNet uses different keypoint indices
+      // For MoveNet: 5=right_shoulder, 7=right_elbow, 9=right_wrist
+      const keypoints = pose.keypoints;
+      
+      const shoulder = keypoints[5];
+      const elbow = keypoints[7];
+      const wrist = keypoints[9];
+      
+      // Check if we have all the points we need with good confidence
+      if (shoulder && elbow && wrist && 
+          shoulder.score > 0.3 && elbow.score > 0.3 && wrist.score > 0.3) {
+        
+        // Calculate the elbow angle
+        elbowAngle = calculateAngle(shoulder, elbow, wrist);
+        inTargetRange = elbowAngle >= minTargetAngle && elbowAngle <= maxTargetAngle;
+        
+        // Draw skeleton
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 4;
+        
+        // Upper arm
+        ctx.beginPath();
+        ctx.moveTo(shoulder.x, shoulder.y);
+        ctx.lineTo(elbow.x, elbow.y);
+        ctx.stroke();
+        
+        // Forearm
+        ctx.beginPath();
+        ctx.moveTo(elbow.x, elbow.y);
+        ctx.lineTo(wrist.x, wrist.y);
+        ctx.stroke();
+        
+        // Draw joints
+        ctx.fillStyle = 'red';
+        
+        // Shoulder joint
+        ctx.beginPath();
+        ctx.arc(shoulder.x, shoulder.y, 8, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Elbow joint
+        ctx.beginPath();
+        ctx.arc(elbow.x, elbow.y, 8, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Wrist joint
+        ctx.beginPath();
+        ctx.arc(wrist.x, wrist.y, 8, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Draw angle visualization
+        drawAngleVisualization(ctx, shoulder, elbow, wrist, elbowAngle);
+      } else {
+        ctx.font = '24px Arial';
+        ctx.fillStyle = 'white';
+        ctx.textAlign = 'center';
+        ctx.fillText('Position your right arm clearly in view', videoWidth / 2, videoHeight / 2);
+      }
+    }
+    
+    // Update UI elements
+    function updateUI() {
+      // Update angle display
+      currentAngleEl.textContent = `${Math.round(elbowAngle)}°`;
+      
+      // Update status
+      if (inTargetRange) {
+        statusEl.textContent = 'In Target Range';
+        statusEl.classList.remove('out-range');
+        statusEl.classList.add('in-range');
+      } else {
+        statusEl.textContent = 'Outside Target Range';
+        statusEl.classList.remove('in-range');
+        statusEl.classList.add('out-range');
+      }
+      
+      // Update progress bar
+      const progressPercentage = Math.min(100, (elbowAngle / maxTargetAngle) * 100);
+      progressFillEl.style.width = `${progressPercentage}%`;
+    }
+    
+    // Main detection and rendering loop
+    async function detectAndRender() {
+      if (!isRunning) return;
+      
+      try {
+        // Set canvas dimensions to match video
+        canvasEl.width = webcamEl.width;
+        canvasEl.height = webcamEl.height;
+        
+        // Detect poses
+        const poses = await detector.estimatePoses(webcamEl);
+        
+        // Render results
+        drawResults(ctx, poses, canvasEl.width, canvasEl.height);
+        
+        // Update UI
+        updateUI();
+        
+        // Continue the loop
+        requestAnimationFrame(detectAndRender);
+      } catch (error) {
+        console.error('Detection error:', error);
+        statusMessageEl.textContent = 'Detection error: ' + error.message;
+        isRunning = false;
+      }
+    }
+    
+    // Start tracking
+    async function startTracking() {
+      try {
+        // Hide the start button and show loading
+        startButtonEl.style.display = 'none';
+        loadingEl.style.display = 'flex';
+        statusMessageEl.textContent = 'Setting up webcam...';
+        
+        // Setup webcam
+        await setupWebcam();
+        
+        // Load pose model
+        statusMessageEl.textContent = 'Loading pose detection model...';
+        detector = await loadPoseDetectionModel();
+        
+        // Hide loading screen, show webcam
+        loadingEl.style.display = 'none';
+        webcamEl.style.display = 'block';
+        
+        // Start the detection loop
+        isRunning = true;
+        detectAndRender();
+      } catch (error) {
+        console.error('Error starting tracking:', error);
+        statusMessageEl.textContent = 'Error starting tracking: ' + error.message;
+        startButtonEl.style.display = 'block';
+      }
+    }
+    
+    // Initialize the app
+    async function init() {
+      try {
+        // Check if TensorFlow.js is available
+        if (typeof tf === 'undefined') {
+          statusMessageEl.textContent = 'TensorFlow.js not loaded. Check your internet connection.';
+          return;
+        }
+        
+        // Show start button
+        statusMessageEl.textContent = 'Ready to start. Click the button below.';
+        startButtonEl.style.display = 'block';
+        startButtonEl.addEventListener('click', startTracking);
+      } catch (error) {
+        console.error('Initialization error:', error);
+        statusMessageEl.textContent = 'Initialization error: ' + error.message;
+      }
+    }
+    
+    // Start when page is loaded
+    window.onload = init;
+  </script>
+</body>
+</html>
