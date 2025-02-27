@@ -1,350 +1,943 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Joint Angle Detection</title>
-    <!-- Load TensorFlow.js -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
-    <!-- Load pose detection model -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 20px;
-        }
-        .video-container {
-            width: 640px;
-            height: 480px;
-            border: 1px solid #ccc;
-            position: relative;
-        }
-        video {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f4f4f4;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alpha-Omega Elbow Angle Tracker</title>
+  <!-- Load TensorFlow.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.11.0"></script>
+  <!-- Load MoveNet model -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@0.0.6"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #1a1a1a;
+      color: white;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    .video-container {
+      position: relative;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+    
+    #webcam {
+      width: 100%;
+      display: none;
+      transform: scaleX(-1);
+    }
+    
+    #canvas {
+      width: 100%;
+      background-color: #000;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+    
+    .controls {
+      background-color: #2a2a2a;
+      padding: 16px;
+      border-radius: 8px;
+      margin-top: 16px;
+    }
+    
+    .controls h3 {
+      margin-top: 0;
+      margin-bottom: 16px;
+      font-size: 18px;
+    }
+    
+    .metrics {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    
+    .metric {
+      text-align: left;
+    }
+    
+    .metric-label {
+      font-size: 12px;
+      color: #aaa;
+      margin-bottom: 4px;
+    }
+    
+    .metric-value {
+      font-size: 24px;
+      font-weight: bold;
+    }
+    
+    .metric-value.in-range {
+      color: #4ade80;
+    }
+    
+    .metric-value.out-range {
+      color: #fbbf24;
+    }
+    
+    .progress-bar {
+      width: 100%;
+      height: 24px;
+      background-color: #3a3a3a;
+      border-radius: 9999px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(to right, #3b82f6, #4ade80);
+      transition: width 0.3s ease-in-out;
+    }
+    
+    .note {
+      font-size: 12px;
+      color: #aaa;
+    }
+    
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 300px;
+      background-color: #1a1a1a;
+      margin-bottom: 20px;
+      border-radius: 8px;
+    }
+    
+    .loading-icon {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 12px;
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top: 4px solid #fff;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    #status-message {
+      margin-top: 10px;
+      text-align: center;
+    }
+
+    button {
+      background-color: #3b82f6;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background-color: #2563eb;
+    }
+    
+    .angle-controls {
+      background-color: #2a2a2a;
+      padding: 16px;
+      border-radius: 8px;
+      margin-top: 16px;
+      margin-bottom: 16px;
+    }
+    
+    .angle-control {
+      margin-bottom: 10px;
+    }
+    
+    .angle-control label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    
+    .slider-container {
+      display: flex;
+      align-items: center;
+    }
+    
+    .slider-container input[type="range"] {
+      flex-grow: 1;
+      margin-right: 10px;
+    }
+    
+    .slider-container input[type="number"] {
+      width: 60px;
+      background-color: #3a3a3a;
+      color: white;
+      border: 1px solid #555;
+      border-radius: 4px;
+      padding: 5px;
+    }
+    
+    .presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    
+    .preset-button {
+      background-color: #3a3a3a;
+      border: 1px solid #555;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    .preset-button:hover {
+      background-color: #4a4a4a;
+    }
+    
+    .switch-container {
+      display: flex;
+      align-items: center;
+      margin: 16px 0;
+    }
+    
+    .switch-label {
+      margin-right: 10px;
+      font-weight: bold;
+    }
+    
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 60px;
+      height: 34px;
+    }
+    
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #3a3a3a;
+      transition: .4s;
+      border-radius: 34px;
+    }
+    
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 26px;
+      width: 26px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    
+    input:checked + .slider {
+      background-color: #3b82f6;
+    }
+    
+    input:checked + .slider:before {
+      transform: translateX(26px);
+    }
+    
+    .angle-type {
+      margin-left: 10px;
+      font-size: 14px;
+      color: #aaa;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Joint Angle Detection</h1>
-        <div class="video-container">
-            <video id="video" playsinline></video>
-            <canvas id="canvas"></canvas>
+  <div class="container">
+    <h2>Alpha-Omega Elbow Angle Tracker</h2>
+    
+    <!-- Angle Range Controls -->
+    <div class="angle-controls">
+      <h3>Movement Range Settings</h3>
+      
+      <div class="angle-control">
+        <label for="alpha-angle">Alpha (Starting Angle): <span id="alpha-angle-value">45</span>°</label>
+        <div class="slider-container">
+          <input type="range" id="alpha-angle" min="0" max="180" value="45" step="1">
+          <input type="number" id="alpha-angle-input" min="0" max="180" value="45">
         </div>
-        <table id="angleTable">
-            <thead>
-                <tr>
-                    <th>Joint</th>
-                    <th>Angle (degrees)</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>Left Shoulder</td>
-                    <td id="leftShoulder">0°</td>
-                </tr>
-                <tr>
-                    <td>Right Shoulder</td>
-                    <td id="rightShoulder">0°</td>
-                </tr>
-                <tr>
-                    <td>Left Elbow</td>
-                    <td id="leftElbow">0°</td>
-                </tr>
-                <tr>
-                    <td>Right Elbow</td>
-                    <td id="rightElbow">0°</td>
-                </tr>
-                <tr>
-                    <td>Left Wrist</td>
-                    <td id="leftWrist">0°</td>
-                </tr>
-                <tr>
-                    <td>Right Wrist</td>
-                    <td id="rightWrist">0°</td>
-                </tr>
-            </tbody>
-        </table>
+      </div>
+      
+      <div class="angle-control">
+        <label for="omega-angle">Omega (Ending Angle): <span id="omega-angle-value">160</span>°</label>
+        <div class="slider-container">
+          <input type="range" id="omega-angle" min="0" max="180" value="160" step="1">
+          <input type="number" id="omega-angle-input" min="0" max="180" value="160">
+        </div>
+      </div>
+      
+      <div class="switch-container">
+        <span class="switch-label">Angle Type:</span>
+        <label class="switch">
+          <input type="checkbox" id="angle-type-switch">
+          <span class="slider"></span>
+        </label>
+        <span class="angle-type" id="angle-type-text">Interior Angle</span>
+      </div>
+      
+      <div class="presets">
+        <button class="preset-button" data-alpha="30" data-omega="90">Flex to 90° (30°→90°)</button>
+        <button class="preset-button" data-alpha="90" data-omega="45">Flex from 90° (90°→45°)</button>
+        <button class="preset-button" data-alpha="90" data-omega="160">Extend from 90° (90°→160°)</button>
+        <button class="preset-button" data-alpha="45" data-omega="120">Wide Range (45°→120°)</button>
+        <button class="preset-button" data-alpha="120" data-omega="45">Reverse Direction (120°→45°)</button>
+      </div>
     </div>
+    
+    <div id="loading" class="loading">
+      <div class="loading-icon"></div>
+      <p id="status-message">Loading TensorFlow.js...</p>
+      <button id="start-button" style="display: none;">Start Tracking</button>
+    </div>
+    
+    <div class="video-container">
+      <video id="webcam" autoplay playsinline></video>
+      <canvas id="canvas"></canvas>
+    </div>
+    
+    <div class="controls">
+      <h3>Elbow Movement Tracker</h3>
+      
+      <div class="metrics">
+        <div class="metric">
+          <div class="metric-label">Current Angle</div>
+          <div id="current-angle" class="metric-value">0°</div>
+        </div>
+        
+        <div class="metric">
+          <div class="metric-label">Status</div>
+          <div id="status" class="metric-value out-range">Outside Target Range</div>
+        </div>
+        
+        <div class="metric">
+          <div class="metric-label">Target Movement</div>
+          <div id="target-range" class="metric-value">45° → 160°</div>
+        </div>
+      </div>
+      
+      <div class="progress-bar">
+        <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+      </div>
+      
+      <p class="note">Move your arm between the Alpha and Omega angles. Stay within the blue target arc.</p>
+    </div>
+  </div>
 
-    <script>
-        class MovingAverage {
-            constructor(size = 15, staleDuration = 10000) { // staleDuration in ms
-                this.size = size;
-                this.values = [];
-                this.lastValidValue = null;
-                this.lastValidTimestamp = null;
-                this.staleDuration = staleDuration;
-            }
-            
-            update(newValue) {
-                const now = Date.now();
-                
-                if (newValue === null) {
-                    // Check if we have a last known value that's not too old
-                    if (this.lastValidValue !== null && 
-                        now - this.lastValidTimestamp < this.staleDuration) {
-                        return {
-                            value: this.lastValidValue,
-                            isStale: true
-                        };
-                    }
-                    return {
-                        value: null,
-                        isStale: false
-                    };
-                }
-
-                // We have a valid new value
-                this.values.push(newValue);
-                if (this.values.length > this.size) {
-                    this.values.shift();
-                }
-                
-                const averageValue = this.average();
-                this.lastValidValue = averageValue;
-                this.lastValidTimestamp = now;
-                
-                return {
-                    value: averageValue,
-                    isStale: false
-                };
-            }
-            
-            average() {
-                if (this.values.length === 0) return null;
-                const sum = this.values.reduce((a, b) => a + b, 0);
-                return Math.round(sum / this.values.length);
-            }
-        }
-
-        const smoothedAngles = {
-            leftShoulder: new MovingAverage(),
-            rightShoulder: new MovingAverage(),
-            leftElbow: new MovingAverage(),
-            rightElbow: new MovingAverage(),
-            leftWrist: new MovingAverage(),
-            rightWrist: new MovingAverage()
+  <script>
+    // DOM Elements
+    const webcamEl = document.getElementById('webcam');
+    const canvasEl = document.getElementById('canvas');
+    const loadingEl = document.getElementById('loading');
+    const startButtonEl = document.getElementById('start-button');
+    const statusMessageEl = document.getElementById('status-message');
+    const currentAngleEl = document.getElementById('current-angle');
+    const statusEl = document.getElementById('status');
+    const targetRangeEl = document.getElementById('target-range');
+    const progressFillEl = document.getElementById('progress-fill');
+    
+    // Angle control elements
+    const alphaAngleSlider = document.getElementById('alpha-angle');
+    const omegaAngleSlider = document.getElementById('omega-angle');
+    const alphaAngleInput = document.getElementById('alpha-angle-input');
+    const omegaAngleInput = document.getElementById('omega-angle-input');
+    const alphaAngleValue = document.getElementById('alpha-angle-value');
+    const omegaAngleValue = document.getElementById('omega-angle-value');
+    const angleTypeSwitch = document.getElementById('angle-type-switch');
+    const angleTypeText = document.getElementById('angle-type-text');
+    const presetButtons = document.querySelectorAll('.preset-button');
+    
+    // Tracking state
+    let detector;
+    let elbowAngle = 0;
+    let inTargetRange = false;
+    let isRunning = false;
+    let useInteriorAngle = true; // Default to interior angle
+    
+    // Define target angle range (alpha to omega)
+    let alphaAngle = 45; // Starting angle
+    let omegaAngle = 160; // Ending angle
+    
+    // Update target range display
+    function updateTargetRangeDisplay() {
+      targetRangeEl.textContent = `${alphaAngle}° → ${omegaAngle}°`;
+    }
+    
+    updateTargetRangeDisplay();
+    
+    // Setup angle type switch
+    angleTypeSwitch.addEventListener('change', function() {
+      useInteriorAngle = !this.checked;
+      angleTypeText.textContent = useInteriorAngle ? "Interior Angle" : "Exterior Angle";
+    });
+    
+    // Setup angle control event listeners
+    alphaAngleSlider.addEventListener('input', function() {
+      const value = parseInt(this.value);
+      alphaAngle = value;
+      alphaAngleValue.textContent = value;
+      alphaAngleInput.value = value;
+      
+      updateTargetRangeDisplay();
+    });
+    
+    omegaAngleSlider.addEventListener('input', function() {
+      const value = parseInt(this.value);
+      omegaAngle = value;
+      omegaAngleValue.textContent = value;
+      omegaAngleInput.value = value;
+      
+      updateTargetRangeDisplay();
+    });
+    
+    alphaAngleInput.addEventListener('change', function() {
+      const value = parseInt(this.value);
+      
+      // Validate input
+      if (isNaN(value) || value < 0) {
+        this.value = 0;
+        alphaAngle = 0;
+      } else if (value > 180) {
+        this.value = 180;
+        alphaAngle = 180;
+      } else {
+        alphaAngle = value;
+      }
+      
+      alphaAngleSlider.value = alphaAngle;
+      alphaAngleValue.textContent = alphaAngle;
+      
+      updateTargetRangeDisplay();
+    });
+    
+    omegaAngleInput.addEventListener('change', function() {
+      const value = parseInt(this.value);
+      
+      // Validate input
+      if (isNaN(value) || value < 0) {
+        this.value = 0;
+        omegaAngle = 0;
+      } else if (value > 180) {
+        this.value = 180;
+        omegaAngle = 180;
+      } else {
+        omegaAngle = value;
+      }
+      
+      omegaAngleSlider.value = omegaAngle;
+      omegaAngleValue.textContent = omegaAngle;
+      
+      updateTargetRangeDisplay();
+    });
+    
+    // Setup preset buttons
+    presetButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        const alpha = parseInt(this.getAttribute('data-alpha'));
+        const omega = parseInt(this.getAttribute('data-omega'));
+        
+        alphaAngle = alpha;
+        omegaAngle = omega;
+        
+        alphaAngleSlider.value = alpha;
+        omegaAngleSlider.value = omega;
+        alphaAngleInput.value = alpha;
+        omegaAngleInput.value = omega;
+        alphaAngleValue.textContent = alpha;
+        omegaAngleValue.textContent = omega;
+        
+        updateTargetRangeDisplay();
+      });
+    });
+    
+    // Canvas setup
+    const ctx = canvasEl.getContext('2d');
+    
+    // Initialize the webcam
+    async function setupWebcam() {
+      return new Promise((resolve, reject) => {
+        navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: 'user',
+            width: { ideal: 640 },
+            height: { ideal: 480 }
+          }
+        })
+        .then(stream => {
+          webcamEl.srcObject = stream;
+          webcamEl.onloadedmetadata = () => {
+            webcamEl.width = webcamEl.videoWidth;
+            webcamEl.height = webcamEl.videoHeight;
+            resolve(webcamEl);
+          };
+        })
+        .catch(error => {
+          statusMessageEl.textContent = 'Error accessing webcam: ' + error.message;
+          reject(error);
+        });
+      });
+    }
+    
+    // Load the pose detection model - using MoveNet which is more reliable in browsers
+    async function loadPoseDetectionModel() {
+      try {
+        // Use MoveNet SinglePose - more reliable than BlazePose in browser environments
+        const model = poseDetection.SupportedModels.MoveNet;
+        const detectorConfig = {
+          modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
+          enableSmoothing: true
         };
-
-        const connections = [
-            ['left_shoulder', 'right_shoulder', '#FF0000'], // red
-            ['left_shoulder', 'left_elbow', '#00FF00'],     // green
-            ['right_shoulder', 'right_elbow', '#0000FF'],   // blue
-            ['left_elbow', 'left_wrist', '#FFA500'],        // orange
-            ['right_elbow', 'right_wrist', '#800080'],      // purple
-            ['left_shoulder', 'left_hip', '#FFFF00'],       // yellow
-            ['right_shoulder', 'right_hip', '#00FFFF'],     // cyan
-            ['left_hip', 'right_hip', '#FF69B4'],          // pink
-            ['left_hip', 'left_knee', '#8B4513'],          // brown
-            ['right_hip', 'right_knee', '#4B0082'],        // indigo
-            ['left_knee', 'left_ankle', '#006400'],        // dark green
-            ['right_knee', 'right_ankle', '#8B0000']       // dark red
-        ];
-
-        async function setupCamera() {
-            const video = document.getElementById('video');
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: { width: 640, height: 480 }
-            });
-            video.srcObject = stream;
-            
-            return new Promise(resolve => {
-                video.onloadedmetadata = () => {
-                    video.play();
-                    resolve(video);
-                };
-            });
-        }
-
-        function calculateAngle(a, b, c) {
-            if (!a || !b || !c || a.score < 0.3 || b.score < 0.3 || c.score < 0.3) {
-                return null;  // Return null for invalid/unseen joints
+        
+        return await poseDetection.createDetector(model, detectorConfig);
+      } catch (error) {
+        console.error('Error loading model:', error);
+        statusMessageEl.textContent = 'Error loading model: ' + error.message;
+        throw error;
+      }
+    }
+    
+    // Calculate angle between three points
+    function calculateAngle(a, b, c) {
+      // Vector BA
+      const ba = { x: a.x - b.x, y: a.y - b.y };
+      // Vector BC
+      const bc = { x: c.x - b.x, y: c.y - b.y };
+      
+      // Dot product and magnitudes
+      const dotProduct = ba.x * bc.x + ba.y * bc.y;
+      const baMagnitude = Math.sqrt(ba.x * ba.x + ba.y * ba.y);
+      const bcMagnitude = Math.sqrt(bc.x * bc.x + bc.y * bc.y);
+      
+      // Cosine of angle
+      const cosAngle = dotProduct / (baMagnitude * bcMagnitude);
+      
+      // Convert to degrees
+      let angleDegrees = Math.acos(Math.max(-1, Math.min(1, cosAngle))) * (180 / Math.PI);
+      
+      // If exterior angle is requested, calculate 360 - interior angle
+      if (!useInteriorAngle) {
+        angleDegrees = 360 - angleDegrees;
+      }
+      
+      return angleDegrees;
+    }
+    
+    // Find angle in radians on the unit circle
+    function getAngleRadians(x, y) {
+      return Math.atan2(y, x);
+    }
+    
+    // Check if current angle is between alpha and omega, considering direction
+    function isAngleInRange(currentAngle, alpha, omega) {
+      // If alpha <= omega, we're moving in the increasing direction
+      if (alpha <= omega) {
+        return currentAngle >= alpha && currentAngle <= omega;
+      } 
+      // If alpha > omega, we're moving in the decreasing direction
+      else {
+        return currentAngle <= alpha && currentAngle >= omega;
+      }
+    }
+    
+    // Get progress percentage between alpha and omega
+    function getProgressPercentage(currentAngle, alpha, omega) {
+      // Get the distance between alpha and omega (handle wrap-around)
+      const totalDistance = Math.abs(omega - alpha);
+      if (totalDistance === 0) return 100; // Avoid division by zero
+      
+      // Get the distance traveled from alpha to current
+      let distanceTraveled;
+      if (alpha <= omega) {
+        // Moving in increasing direction
+        distanceTraveled = Math.max(0, Math.min(totalDistance, currentAngle - alpha));
+      } else {
+        // Moving in decreasing direction
+        distanceTraveled = Math.max(0, Math.min(totalDistance, alpha - currentAngle));
+      }
+      
+      // Calculate percentage
+      return (distanceTraveled / totalDistance) * 100;
+    }
+    
+    // Draw angle visualization
+    function drawAngleVisualization(ctx, shoulder, elbow, wrist, angle) {
+      // Calculate vectors
+      const upperArmVector = { 
+        x: shoulder.x - elbow.x, 
+        y: shoulder.y - elbow.y 
+      };
+      const forearmVector = { 
+        x: wrist.x - elbow.x, 
+        y: wrist.y - elbow.y 
+      };
+      
+      // Get the angle of upper arm and forearm in radians
+      const upperArmAngle = getAngleRadians(upperArmVector.x, upperArmVector.y);
+      const forearmAngle = getAngleRadians(forearmVector.x, forearmVector.y);
+      
+      // Convert alpha and omega to radians
+      const alphaRad = (alphaAngle * Math.PI) / 180;
+      const omegaRad = (omegaAngle * Math.PI) / 180;
+      
+      // Radius for drawing arcs
+      const radius = 50;
+      
+      // Draw the current angle arc (green when in range, orange when out)
+      ctx.beginPath();
+      
+      if (useInteriorAngle) {
+        // Draw interior angle from upper arm to forearm
+        ctx.arc(elbow.x, elbow.y, radius, upperArmAngle, forearmAngle, false);
+      } else {
+        // Draw exterior angle from upper arm to forearm (the "other way around")
+        ctx.arc(elbow.x, elbow.y, radius, upperArmAngle, forearmAngle, true);
+      }
+      
+      // Style based on whether angle is in target range
+      if (inTargetRange) {
+        ctx.strokeStyle = 'rgba(0, 255, 0, 0.7)'; // Green when in range
+        ctx.fillStyle = 'rgba(0, 255, 0, 0.3)';
+      } else {
+        ctx.strokeStyle = 'rgba(255, 165, 0, 0.7)'; // Orange when out of range
+        ctx.fillStyle = 'rgba(255, 165, 0, 0.3)';
+      }
+      
+      ctx.lineWidth = 6;
+      ctx.stroke();
+      ctx.fill();
+      
+      
+      // For interior angle measurements
+      if (useInteriorAngle) {
+        // Calculate reference angle (usually the upper arm)
+        const refAngle = upperArmAngle;
+        
+        // Map alpha and omega to actual arc angles
+        // For interior angles: we need to calculate offset from the reference angle
+        let alphaArcAngle, omegaArcAngle;
+        
+        // Convert alpha/omega from degrees to actual arc angles
+        // For interior angle, subtract the angle from PI + refAngle
+        alphaArcAngle = (Math.PI + refAngle) - (alphaAngle * Math.PI / 180);
+        omegaArcAngle = (Math.PI + refAngle) - (omegaAngle * Math.PI / 180);
+        
+        // Calculate the absolute angular difference
+        const angleDiff = Math.abs(alphaArcAngle - omegaArcAngle);
+        // Determine if we need to draw the minor arc
+        const useMinorArc = angleDiff > Math.PI;
+        
+        // Draw target range arc
+        ctx.beginPath();
+        // Use counterclockwise arc direction if alpha < omega, clockwise if alpha > omega
+        ctx.arc(
+          elbow.x, 
+          elbow.y, 
+          radius + 10, 
+          alphaArcAngle, 
+          omegaArcAngle, 
+          // This ensures we always draw the minor (smaller) arc
+          useMinorArc ? (alphaArcAngle < omegaArcAngle) : (alphaArcAngle > omegaArcAngle)
+        );
+        ctx.strokeStyle = 'rgba(100, 100, 255, 0.6)';
+        ctx.lineWidth = 10;
+        ctx.stroke();
+      }
+      // For exterior angle measurements
+      else {
+        // Calculate reference angle (usually the upper arm)
+        const refAngle = upperArmAngle;
+        
+        // Map alpha and omega to actual arc angles
+        // For exterior angles: we add the angle to the reference angle
+        let alphaArcAngle, omegaArcAngle;
+        
+        // Convert alpha/omega from degrees to actual arc angles
+        // For exterior angle, add the angle to refAngle
+        alphaArcAngle = refAngle + (alphaAngle * Math.PI / 180);
+        omegaArcAngle = refAngle + (omegaAngle * Math.PI / 180);
+        
+        // Calculate the absolute angular difference
+        const angleDiff = Math.abs(alphaArcAngle - omegaArcAngle);
+        // Determine if we need to draw the minor arc
+        const useMinorArc = angleDiff > Math.PI;
+        
+        // Draw target range arc
+        ctx.beginPath();
+        // Use counterclockwise arc direction if alpha > omega, clockwise if alpha < omega
+        // (opposite of interior because exterior angles work in reverse)
+        ctx.arc(
+          elbow.x, 
+          elbow.y, 
+          radius + 10, 
+          alphaArcAngle, 
+          omegaArcAngle, 
+          // This ensures we always draw the minor (smaller) arc
+          useMinorArc ? (alphaArcAngle < omegaArcAngle) : (alphaArcAngle > omegaArcAngle)
+        );
+        ctx.strokeStyle = 'rgba(100, 100, 255, 0.6)';
+        ctx.lineWidth = 10;
+        ctx.stroke();
+      }
+      
+      // Draw angle text
+      ctx.font = '20px Arial';
+      ctx.fillStyle = 'white';
+      ctx.fillText(`${Math.round(angle)}°`, elbow.x + 20, elbow.y - 20);
+      
+      // Calculate positions for alpha/omega labels - depends on the angle type
+      let alphaTextPos, omegaTextPos;
+      
+      if (useInteriorAngle) {
+        const alphaArcAngle = (Math.PI + upperArmAngle) - (alphaAngle * Math.PI / 180);
+        const omegaArcAngle = (Math.PI + upperArmAngle) - (omegaAngle * Math.PI / 180);
+        
+        alphaTextPos = {
+          x: elbow.x + (radius + 30) * Math.cos(alphaArcAngle),
+          y: elbow.y + (radius + 30) * Math.sin(alphaArcAngle)
+        };
+        
+        omegaTextPos = {
+          x: elbow.x + (radius + 30) * Math.cos(omegaArcAngle),
+          y: elbow.y + (radius + 30) * Math.sin(omegaArcAngle)
+        };
+      } else {
+        const alphaArcAngle = upperArmAngle + (alphaAngle * Math.PI / 180);
+        const omegaArcAngle = upperArmAngle + (omegaAngle * Math.PI / 180);
+        
+        alphaTextPos = {
+          x: elbow.x + (radius + 30) * Math.cos(alphaArcAngle),
+          y: elbow.y + (radius + 30) * Math.sin(alphaArcAngle)
+        };
+        
+        omegaTextPos = {
+          x: elbow.x + (radius + 30) * Math.cos(omegaArcAngle),
+          y: elbow.y + (radius + 30) * Math.sin(omegaArcAngle)
+        };
+      }
+      
+      ctx.font = '16px Arial';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.fillText(`α: ${alphaAngle}°`, alphaTextPos.x, alphaTextPos.y);
+      ctx.fillText(`ω: ${omegaAngle}°`, omegaTextPos.x, omegaTextPos.y);
+    }
+    
+    // Draw results on canvas
+    function drawResults(ctx, poses, canvasWidth, canvasHeight) {
+      // Clear the canvas
+      ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+      
+      if (!poses || poses.length === 0) {
+        ctx.font = '24px Arial';
+        ctx.fillStyle = 'white';
+        ctx.textAlign = 'center';
+        ctx.fillText('No poses detected. Make sure your body is visible.', canvasWidth / 2, canvasHeight / 2);
+        return;
+      }
+      
+      // Get the first detected pose
+      const pose = poses[0];
+      
+      // MoveNet uses different keypoint indices
+      // For MoveNet: 5=right_shoulder, 7=right_elbow, 9=right_wrist
+      const keypoints = pose.keypoints;
+      
+      const shoulder = keypoints[5];
+      const elbow = keypoints[7];
+      const wrist = keypoints[9];
+      
+      // Check if we have all the points we need with good confidence
+      if (shoulder && elbow && wrist && 
+          shoulder.score > 0.3 && elbow.score > 0.3 && wrist.score > 0.3) {
+        
+        // Calculate the elbow angle
+        elbowAngle = calculateAngle(shoulder, elbow, wrist);
+        inTargetRange = isAngleInRange(elbowAngle, alphaAngle, omegaAngle);
+        
+        // Draw skeleton
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 4;
+        
+        // Upper arm
+        ctx.beginPath();
+        ctx.moveTo(shoulder.x, shoulder.y);
+        ctx.lineTo(elbow.x, elbow.y);
+        ctx.stroke();
+        
+        // Forearm
+        ctx.beginPath();
+        ctx.moveTo(elbow.x, elbow.y);
+        ctx.lineTo(wrist.x, wrist.y);
+        ctx.stroke();
+        
+        // Draw joints
+        ctx.fillStyle = 'red';
+        
+        // Shoulder joint
+        ctx.beginPath();
+        ctx.arc(shoulder.x, shoulder.y, 8, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Elbow joint
+        ctx.beginPath();
+        ctx.arc(elbow.x, elbow.y, 8, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Wrist joint
+        ctx.beginPath();
+        ctx.arc(wrist.x, wrist.y, 8, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Draw angle visualization
+        drawAngleVisualization(ctx, shoulder, elbow, wrist, elbowAngle);
+      } else {
+        ctx.font = '24px Arial';
+        ctx.fillStyle = 'white';
+        ctx.textAlign = 'center';
+        ctx.fillText('Position your right arm clearly in view', canvasWidth / 2, canvasHeight / 2);
+      }
+    }
+    
+    // Update UI elements
+    function updateUI() {
+      // Update angle display
+      currentAngleEl.textContent = `${Math.round(elbowAngle)}°`;
+      
+      // Update status
+      if (inTargetRange) {
+        statusEl.textContent = 'In Target Range';
+        statusEl.classList.remove('out-range');
+        statusEl.classList.add('in-range');
+      } else {
+        statusEl.textContent = 'Outside Target Range';
+        statusEl.classList.remove('in-range');
+        statusEl.classList.add('out-range');
+      }
+      
+      // Update progress bar based on movement from alpha to omega
+      const progressPercentage = getProgressPercentage(elbowAngle, alphaAngle, omegaAngle);
+      progressFillEl.style.width = `${progressPercentage}%`;
+    }
+    
+    // Main detection and rendering loop
+    async function detectAndRender() {
+      if (!isRunning) return;
+      
+      try {
+        // Set canvas dimensions to match video
+        canvasEl.width = webcamEl.width;
+        canvasEl.height = webcamEl.height;
+        
+        // Clear the canvas
+        ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+        
+        // Detect poses
+        const poses = await detector.estimatePoses(webcamEl);
+        
+        // Mirror the pose data directly
+        if (poses && poses.length > 0) {
+          poses.forEach(pose => {
+            if (pose.keypoints) {
+              pose.keypoints.forEach(keypoint => {
+                // Mirror the x coordinates relative to canvas width
+                keypoint.x = canvasEl.width - keypoint.x;
+              });
             }
-            
-            const radians = Math.atan2(c.y - b.y, c.x - b.x) - 
-                           Math.atan2(a.y - b.y, a.x - b.x);
-            let angle = Math.abs(radians * 180.0 / Math.PI);
-            
-            if (angle > 180.0) {
-                angle = 360 - angle;
-            }
-            return Math.round(angle);
+          });
         }
-
-        function updateAngleDisplay(jointId, angleData) {
-            const element = document.getElementById(jointId);
-            if (element) {
-                if (angleData.value === null) {
-                    element.textContent = 'N/A';
-                    element.style.color = '';
-                } else {
-                    element.textContent = `${angleData.value}°`;
-                    element.style.color = angleData.isStale ? '#999' : '';
-                }
-            }
+        
+        // Now draw with normal context (no mirroring needed since data is mirrored)
+        drawResults(ctx, poses, canvasEl.width, canvasEl.height);
+        
+        // Update UI
+        updateUI();
+        
+        // Continue the loop
+        requestAnimationFrame(detectAndRender);
+      } catch (error) {
+        console.error("Error in pose detection:", error);
+        statusEl.textContent = "Error: " + error.message;
+        stopDetection();
+      }
+    }
+    
+    // Start tracking
+    async function startTracking() {
+      try {
+        // Hide the start button and show loading
+        startButtonEl.style.display = 'none';
+        loadingEl.style.display = 'flex';
+        statusMessageEl.textContent = 'Setting up webcam...';
+        
+        // Setup webcam
+        await setupWebcam();
+        
+        // Load pose model
+        statusMessageEl.textContent = 'Loading pose detection model...';
+        detector = await loadPoseDetectionModel();
+        
+        // Hide loading screen, show webcam
+        loadingEl.style.display = 'none';
+        webcamEl.style.display = 'block';
+        
+        // Start the detection loop
+        isRunning = true;
+        detectAndRender();
+      } catch (error) {
+        console.error('Error starting tracking:', error);
+        statusMessageEl.textContent = 'Error starting tracking: ' + error.message;
+        startButtonEl.style.display = 'block';
+      }
+    }
+    
+    // Initialize the app
+    async function init() {
+      try {
+        // Check if TensorFlow.js is available
+        if (typeof tf === 'undefined') {
+          statusMessageEl.textContent = 'TensorFlow.js not loaded. Check your internet connection.';
+          return;
         }
-
-        function drawSkeleton(keypoints, ctx) {
-            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-            
-            // Draw connections
-            ctx.lineWidth = 4;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            
-            connections.forEach(([start, end, color]) => {
-                const startPoint = keypoints.find(kp => kp.name === start);
-                const endPoint = keypoints.find(kp => kp.name === end);
-                
-                if (startPoint && endPoint && startPoint.score > 0.3 && endPoint.score > 0.3) {
-                    ctx.strokeStyle = color;
-                    ctx.beginPath();
-                    ctx.moveTo(startPoint.x, startPoint.y);
-                    ctx.lineTo(endPoint.x, endPoint.y);
-                    ctx.stroke();
-                }
-            });
-            
-            // Draw keypoints
-            keypoints.forEach(keypoint => {
-                if (keypoint.score > 0.3) {
-                    ctx.fillStyle = '#ffffff';  // white dots
-                    ctx.strokeStyle = '#000000'; // black outline
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.arc(keypoint.x, keypoint.y, 6, 0, 2 * Math.PI);
-                    ctx.fill();
-                    ctx.stroke();
-                }
-            });
-        }
-
-        async function init() {
-            try {
-                await tf.ready();
-                
-                // Create detector with specific configuration
-                const model = poseDetection.SupportedModels.MoveNet;
-                const detector = await poseDetection.createDetector(model, {
-                    modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER,
-                    enableSmoothing: true,
-                    minPoseScore: 0.3
-                });
-
-                const video = await setupCamera();
-                
-                // Setup canvas with explicit dimensions
-                const canvas = document.getElementById('canvas');
-                canvas.width = 640;
-                canvas.height = 480;
-                const ctx = canvas.getContext('2d');
-
-                async function detectPose() {
-                    const poses = await detector.estimatePoses(video, {
-                        maxPoses: 1,
-                        flipHorizontal: false
-                    });
-                    
-                    if (poses.length > 0) {
-                        const keypoints = poses[0].keypoints;
-                        
-                        // Scale keypoints to canvas size
-                        const scaledKeypoints = keypoints.map(kp => ({
-                            ...kp,
-                            x: kp.x * (canvas.width / video.videoWidth),
-                            y: kp.y * (canvas.height / video.videoHeight)
-                        }));
-                        
-                        // Draw skeleton with scaled keypoints
-                        drawSkeleton(scaledKeypoints, ctx);
-                        
-                        const keypointDict = Object.fromEntries(
-                            scaledKeypoints.map(kp => [kp.name, kp])
-                        );
-
-                        // Calculate raw angles
-                        const rawAngles = {
-                            leftShoulder: calculateAngle(
-                                keypointDict['left_hip'],
-                                keypointDict['left_shoulder'],
-                                keypointDict['left_elbow']
-                            ),
-                            rightShoulder: calculateAngle(
-                                keypointDict['right_hip'],
-                                keypointDict['right_shoulder'],
-                                keypointDict['right_elbow']
-                            ),
-                            leftElbow: calculateAngle(
-                                keypointDict['left_shoulder'],
-                                keypointDict['left_elbow'],
-                                keypointDict['left_wrist']
-                            ),
-                            rightElbow: calculateAngle(
-                                keypointDict['right_shoulder'],
-                                keypointDict['right_elbow'],
-                                keypointDict['right_wrist']
-                            ),
-                            leftWrist: calculateAngle(
-                                keypointDict['left_elbow'],
-                                keypointDict['left_wrist'],
-                                keypointDict['left_pinky']
-                            ),
-                            rightWrist: calculateAngle(
-                                keypointDict['right_elbow'],
-                                keypointDict['right_wrist'],
-                                keypointDict['right_pinky']
-                            )
-                        };
-
-                        // Apply smoothing and update display
-                        Object.entries(rawAngles).forEach(([joint, angle]) => {
-                            const result = smoothedAngles[joint].update(angle);
-                            updateAngleDisplay(joint, result);
-                        });
-                    }
-                    
-                    requestAnimationFrame(detectPose);
-                }
-
-                detectPose();
-            } catch (error) {
-                console.error('Error initializing:', error);
-                alert('Error initializing pose detection: ' + error.message);
-            }
-        }
-
-        // Start the application when everything is loaded
-        window.onload = init;
-    </script>
+        
+        // Show start button
+        statusMessageEl.textContent = 'Ready to start. Click the button below.';
+        startButtonEl.style.display = 'block';
+        startButtonEl.addEventListener('click', startTracking);
+      } catch (error) {
+        console.error('Initialization error:', error);
+        statusMessageEl.textContent = 'Initialization error: ' + error.message;
+      }
+    }
+    
+    // Start when page is loaded
+    window.onload = init;
+  </script>
 </body>
 </html>
