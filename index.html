@@ -575,23 +575,33 @@
       };
       
       // Get the angle of upper arm and forearm in radians
+      // The target range arc is relative to the angle of the upper arm
       const upperArmAngle = getAngleRadians(upperArmVector.x, upperArmVector.y);
       const forearmAngle = getAngleRadians(forearmVector.x, forearmVector.y);
       
       // Radius for drawing arcs
       const radius = 50;
       
-      // Recalculate target arc angles correctly
-      // Map anatomical angles (0-180°) to actual forearm positions
-      // When elbow = 180° (straight arm), forearm is opposite upper arm 
-      // When elbow = 0° (fully bent), forearm is parallel to upper arm
-      const alphaArcAngle = upperArmAngle + (Math.PI * (180 - alphaAngle) / 180);
-      const omegaArcAngle = upperArmAngle + (Math.PI * (180 - omegaAngle) / 180);
+      // Calculate where the forearm would be at alpha and omega angles
+      // The mapping is from anatomical angle (0-180°) to forearm position relative to upper arm
+      // Convert anatomical angles to arc angles
+      // 180° elbow angle = upperArmAngle + π (straight arm)
+      // 0° elbow angle = upperArmAngle (fully bent arm)(arm folded in on itself somehow)
+
+      // Change the alpha and omega angles into the coordinate system where the upper arm is at 0 degrees
+      // This is because the upper arm is the reference frame for the target range arc
+      const alphaArcAngle = upperArmAngle + Math.PI * (alphaAngle / 180);
+      const omegaArcAngle = upperArmAngle + Math.PI * (omegaAngle / 180);
+
       
-      // Calculate the absolute angular difference
-      const angleDiff = Math.abs(alphaArcAngle - omegaArcAngle);
-      // Determine if we need to draw the minor arc
-      const useMinorArc = angleDiff > Math.PI;
+      // Draw target range arc - determining the correct direction
+      // We need to decide which way to draw the arc (clockwise or counterclockwise)
+      // to ensure we're drawing the interior angle
+      
+      // Calculate angle difference considering the circle wrapping
+      let angleDiff = omegaArcAngle - alphaArcAngle;
+      if (angleDiff < 0) angleDiff += 2 * Math.PI;
+      let isClockwise = angleDiff > Math.PI;
       
       // Draw target range arc
       ctx.beginPath();
@@ -601,8 +611,7 @@
         radius + 10, 
         alphaArcAngle, 
         omegaArcAngle, 
-        // This ensures we always draw the minor (smaller) arc
-        useMinorArc ? (alphaArcAngle < omegaArcAngle) : (alphaArcAngle > omegaArcAngle)
+        isClockwise
       );
       ctx.strokeStyle = 'rgba(100, 100, 255, 0.6)';
       ctx.lineWidth = 10;
