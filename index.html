@@ -219,46 +219,423 @@
     .preset-button:hover {
       background-color: #4a4a4a;
     }
+
+    .rep-counter-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 3;
+      pointer-events: none; /* Allow interaction with elements below */
+    }
+
+    .current-angle {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      font-size: 32px;
+      color: white;
+      background-color: rgba(0, 0, 0, 0.5);
+      padding: 10px 15px;
+      border-radius: 8px;
+      font-weight: bold;
+    }
+
+    .rep-count {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      font-size: 48px;
+      color: white;
+      background-color: rgba(59, 130, 246, 0.7);
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: bold;
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #444;
+    }
+    
+    .tab-button {
+      background-color: #333;
+      color: #aaa;
+      border: none;
+      padding: 8px 12px;
+      margin-right: 2px;
+      cursor: pointer;
+      border-top-left-radius: 4px;
+      border-top-right-radius: 4px;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    
+    .tab-button:hover {
+      background-color: #444;
+      color: white;
+    }
+    
+    .tab-button.active {
+      background-color: #2a2a2a;
+      color: white;
+      border-bottom: 2px solid #3b82f6;
+    }
+    
+    .tab-content {
+      background-color: #2a2a2a;
+      border-radius: 0 0 8px 8px;
+      padding: 16px;
+    }
+    
+    .tab-pane {
+      display: none;
+    }
+    
+    .tab-pane.active {
+      display: block;
+    }
+    
+    .compact-presets {
+      display: flex;
+      gap: 5px;
+      margin-top: 10px;
+    }
+    
+    .compact-presets .preset-button {
+      font-size: 12px;
+      padding: 5px 8px;
+    }
+    
+    .global-controls {
+      margin-top: 16px;
+      background-color: #2a2a2a;
+      padding: 16px;
+      border-radius: 8px;
+    }
+    
+    .joint-angle-displays {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .joint-angle {
+      font-size: 24px;
+      color: white;
+      background-color: rgba(0, 0, 0, 0.5);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-weight: bold;
+    }
+
+    .joint-toggles {
+      background-color: #2a2a2a;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    
+    .toggle-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 10px;
+    }
+    
+    .toggle-label {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      padding: 8px 12px;
+      background-color: #333;
+      border-radius: 6px;
+      transition: background-color 0.2s;
+    }
+    
+    .toggle-label:hover {
+      background-color: #444;
+    }
+    
+    .toggle-label input[type="checkbox"] {
+      margin-right: 8px;
+      width: 16px;
+      height: 16px;
+    }
+    
+    .color-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-left: auto;
+    }
+    
+    .joint-name {
+      font-size: 14px;
+    }
+    
+    .joint-settings {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 16px;
+    }
+    
+    .joint-setting {
+      background-color: #2a2a2a;
+      padding: 15px;
+      border-radius: 8px;
+    }
+    
+    .joint-setting h3 {
+      margin-top: 0;
+      margin-bottom: 12px;
+      font-size: 16px;
+      border-bottom: 1px solid #444;
+      padding-bottom: 8px;
+    }
+    
+    .angle-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .angle-control {
+      margin-bottom: 8px;
+    }
+    
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .slider-container input[type="range"] {
+      flex: 1;
+    }
+    
+    .slider-container input[type="number"] {
+      width: 60px;
+    }
+    
+    .compact-presets {
+      display: flex;
+      gap: 6px;
+    }
+    
+    .preset-button {
+      font-size: 12px;
+      padding: 4px 8px;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>Alpha-Omega Left Elbow Angle Tracker</h2>
+    <h2>Joint Angle Tracker</h2>
     
-    <!-- Angle Range Controls -->
-    <div class="angle-controls">
-      <h3>Movement Range Settings</h3>
-      
-      <div class="angle-control">
-        <label for="alpha-angle">Alpha (Starting Angle): <span id="alpha-angle-value">160</span>°</label>
-        <div class="slider-container">
-          <input type="range" id="alpha-angle" min="0" max="180" value="160" step="1">
-          <input type="number" id="alpha-angle-input" min="0" max="180" value="160">
+    <!-- Joint Angle Controls -->
+    <div class="joint-controls">
+      <div class="joint-toggles">
+        <h3>Select Joints to Track</h3>
+        <div class="toggle-grid">
+          <label class="toggle-label">
+            <input type="checkbox" data-joint="left-elbow" checked>
+            <span class="joint-name">Left Elbow</span>
+            <span class="color-dot" style="background-color: rgb(59, 130, 246);"></span>
+          </label>
+          <label class="toggle-label">
+            <input type="checkbox" data-joint="right-elbow">
+            <span class="joint-name">Right Elbow</span>
+            <span class="color-dot" style="background-color: rgb(239, 68, 68);"></span>
+          </label>
+          <label class="toggle-label">
+            <input type="checkbox" data-joint="left-shoulder">
+            <span class="joint-name">Left Shoulder</span>
+            <span class="color-dot" style="background-color: rgb(16, 185, 129);"></span>
+          </label>
+          <label class="toggle-label">
+            <input type="checkbox" data-joint="right-shoulder">
+            <span class="joint-name">Right Shoulder</span>
+            <span class="color-dot" style="background-color: rgb(249, 115, 22);"></span>
+          </label>
+          <label class="toggle-label">
+            <input type="checkbox" data-joint="left-knee">
+            <span class="joint-name">Left Knee</span>
+            <span class="color-dot" style="background-color: rgb(139, 92, 246);"></span>
+          </label>
+          <label class="toggle-label">
+            <input type="checkbox" data-joint="right-knee">
+            <span class="joint-name">Right Knee</span>
+            <span class="color-dot" style="background-color: rgb(236, 72, 153);"></span>
+          </label>
         </div>
       </div>
       
-      <div class="angle-control">
-        <label for="omega-angle">Omega (Ending Angle): <span id="omega-angle-value">45</span>°</label>
-        <div class="slider-container">
-          <input type="range" id="omega-angle" min="0" max="180" value="45" step="1">
-          <input type="number" id="omega-angle-input" min="0" max="180" value="45">
+      <div class="joint-settings">
+        <!-- Left Elbow Settings -->
+        <div class="joint-setting" id="left-elbow-settings">
+          <h3>Left Elbow</h3>
+          <div class="angle-controls">
+            <div class="angle-control">
+              <label for="left-elbow-alpha">Alpha: <span id="left-elbow-alpha-value">160</span>°</label>
+              <div class="slider-container">
+                <input type="range" id="left-elbow-alpha" min="0" max="180" value="160" step="1" data-joint="left-elbow" data-param="alpha">
+                <input type="number" id="left-elbow-alpha-input" min="0" max="180" value="160" data-joint="left-elbow" data-param="alpha">
+              </div>
+            </div>
+            <div class="angle-control">
+              <label for="left-elbow-omega">Omega: <span id="left-elbow-omega-value">45</span>°</label>
+              <div class="slider-container">
+                <input type="range" id="left-elbow-omega" min="0" max="180" value="45" step="1" data-joint="left-elbow" data-param="omega">
+                <input type="number" id="left-elbow-omega-input" min="0" max="180" value="45" data-joint="left-elbow" data-param="omega">
+              </div>
+            </div>
+            <div class="compact-presets">
+              <button class="preset-button" data-joint="left-elbow" data-alpha="160" data-omega="45">160°→45°</button>
+              <button class="preset-button" data-joint="left-elbow" data-alpha="45" data-omega="160">45°→160°</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Right Elbow Settings -->
+        <div class="joint-setting" id="right-elbow-settings">
+          <h3>Right Elbow</h3>
+          <div class="angle-controls">
+            <div class="angle-control">
+              <label for="right-elbow-alpha">Alpha: <span id="right-elbow-alpha-value">160</span>°</label>
+              <div class="slider-container">
+                <input type="range" id="right-elbow-alpha" min="0" max="180" value="160" step="1" data-joint="right-elbow" data-param="alpha">
+                <input type="number" id="right-elbow-alpha-input" min="0" max="180" value="160" data-joint="right-elbow" data-param="alpha">
+              </div>
+            </div>
+            <div class="angle-control">
+              <label for="right-elbow-omega">Omega: <span id="right-elbow-omega-value">45</span>°</label>
+              <div class="slider-container">
+                <input type="range" id="right-elbow-omega" min="0" max="180" value="45" step="1" data-joint="right-elbow" data-param="omega">
+                <input type="number" id="right-elbow-omega-input" min="0" max="180" value="45" data-joint="right-elbow" data-param="omega">
+              </div>
+            </div>
+            <div class="compact-presets">
+              <button class="preset-button" data-joint="right-elbow" data-alpha="160" data-omega="45">160°→45°</button>
+              <button class="preset-button" data-joint="right-elbow" data-alpha="45" data-omega="160">45°→160°</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Left Shoulder Settings -->
+        <div class="joint-setting" id="left-shoulder-settings">
+          <h3>Left Shoulder</h3>
+          <div class="angle-controls">
+            <div class="angle-control">
+              <label for="left-shoulder-alpha">Alpha: <span id="left-shoulder-alpha-value">90</span>°</label>
+              <div class="slider-container">
+                <input type="range" id="left-shoulder-alpha" min="0" max="180" value="90" step="1" data-joint="left-shoulder" data-param="alpha">
+                <input type="number" id="left-shoulder-alpha-input" min="0" max="180" value="90" data-joint="left-shoulder" data-param="alpha">
+              </div>
+            </div>
+            <div class="angle-control">
+              <label for="left-shoulder-omega">Omega: <span id="left-shoulder-omega-value">180</span>°</label>
+              <div class="slider-container">
+                <input type="range" id="left-shoulder-omega" min="0" max="180" value="180" step="1" data-joint="left-shoulder" data-param="omega">
+                <input type="number" id="left-shoulder-omega-input" min="0" max="180" value="180" data-joint="left-shoulder" data-param="omega">
+              </div>
+            </div>
+            <div class="compact-presets">
+              <button class="preset-button" data-joint="left-shoulder" data-alpha="90" data-omega="180">90°→180°</button>
+              <button class="preset-button" data-joint="left-shoulder" data-alpha="180" data-omega="90">180°→90°</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Right Shoulder Settings -->
+        <div class="joint-setting" id="right-shoulder-settings">
+          <h3>Right Shoulder</h3>
+          <div class="angle-controls">
+            <div class="angle-control">
+              <label for="right-shoulder-alpha">Alpha: <span id="right-shoulder-alpha-value">90</span>°</label>
+              <div class="slider-container">
+                <input type="range" id="right-shoulder-alpha" min="0" max="180" value="90" step="1" data-joint="right-shoulder" data-param="alpha">
+                <input type="number" id="right-shoulder-alpha-input" min="0" max="180" value="90" data-joint="right-shoulder" data-param="alpha">
+              </div>
+            </div>
+            <div class="angle-control">
+              <label for="right-shoulder-omega">Omega: <span id="right-shoulder-omega-value">180</span>°</label>
+              <div class="slider-container">
+                <input type="range" id="right-shoulder-omega" min="0" max="180" value="180" step="1" data-joint="right-shoulder" data-param="omega">
+                <input type="number" id="right-shoulder-omega-input" min="0" max="180" value="180" data-joint="right-shoulder" data-param="omega">
+              </div>
+            </div>
+            <div class="compact-presets">
+              <button class="preset-button" data-joint="right-shoulder" data-alpha="90" data-omega="180">90°→180°</button>
+              <button class="preset-button" data-joint="right-shoulder" data-alpha="180" data-omega="90">180°→90°</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Left Knee Settings -->
+        <div class="joint-setting" id="left-knee-settings">
+          <h3>Left Knee</h3>
+          <div class="angle-controls">
+            <div class="angle-control">
+              <label for="left-knee-alpha">Alpha: <span id="left-knee-alpha-value">170</span>°</label>
+              <div class="slider-container">
+                <input type="range" id="left-knee-alpha" min="0" max="180" value="170" step="1" data-joint="left-knee" data-param="alpha">
+                <input type="number" id="left-knee-alpha-input" min="0" max="180" value="170" data-joint="left-knee" data-param="alpha">
+              </div>
+            </div>
+            <div class="angle-control">
+              <label for="left-knee-omega">Omega: <span id="left-knee-omega-value">90</span>°</label>
+              <div class="slider-container">
+                <input type="range" id="left-knee-omega" min="0" max="180" value="90" step="1" data-joint="left-knee" data-param="omega">
+                <input type="number" id="left-knee-omega-input" min="0" max="180" value="90" data-joint="left-knee" data-param="omega">
+              </div>
+            </div>
+            <div class="compact-presets">
+              <button class="preset-button" data-joint="left-knee" data-alpha="170" data-omega="90">170°→90°</button>
+              <button class="preset-button" data-joint="left-knee" data-alpha="90" data-omega="170">90°→170°</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Right Knee Settings -->
+        <div class="joint-setting" id="right-knee-settings">
+          <h3>Right Knee</h3>
+          <div class="angle-controls">
+            <div class="angle-control">
+              <label for="right-knee-alpha">Alpha: <span id="right-knee-alpha-value">170</span>°</label>
+              <div class="slider-container">
+                <input type="range" id="right-knee-alpha" min="0" max="180" value="170" step="1" data-joint="right-knee" data-param="alpha">
+                <input type="number" id="right-knee-alpha-input" min="0" max="180" value="170" data-joint="right-knee" data-param="alpha">
+              </div>
+            </div>
+            <div class="angle-control">
+              <label for="right-knee-omega">Omega: <span id="right-knee-omega-value">90</span>°</label>
+              <div class="slider-container">
+                <input type="range" id="right-knee-omega" min="0" max="180" value="90" step="1" data-joint="right-knee" data-param="omega">
+                <input type="number" id="right-knee-omega-input" min="0" max="180" value="90" data-joint="right-knee" data-param="omega">
+              </div>
+            </div>
+            <div class="compact-presets">
+              <button class="preset-button" data-joint="right-knee" data-alpha="170" data-omega="90">170°→90°</button>
+              <button class="preset-button" data-joint="right-knee" data-alpha="90" data-omega="170">90°→170°</button>
+            </div>
+          </div>
         </div>
       </div>
       
-      <div class="angle-control">
-        <label for="angle-tolerance">Rep Detection Tolerance: <span id="angle-tolerance-value">10</span>°</label>
-        <div class="slider-container">
-          <input type="range" id="angle-tolerance" min="1" max="30" value="10" step="1">
-          <input type="number" id="angle-tolerance-input" min="1" max="30" value="10">
+      <div class="global-controls">
+        <div class="angle-control">
+          <label for="angle-tolerance">Detection Tolerance: <span id="angle-tolerance-value">10</span>°</label>
+          <div class="slider-container">
+            <input type="range" id="angle-tolerance" min="1" max="30" value="10" step="1">
+            <input type="number" id="angle-tolerance-input" min="1" max="30" value="10">
+          </div>
         </div>
-      </div>
-      
-      <div class="presets">
-        <button class="preset-button" data-alpha="30" data-omega="90">Flex to 90° (30°→90°)</button>
-        <button class="preset-button" data-alpha="90" data-omega="45">Flex from 90° (90°→45°)</button>
-        <button class="preset-button" data-alpha="90" data-omega="160">Extend from 90° (90°→160°)</button>
-        <button class="preset-button" data-alpha="45" data-omega="120">Wide Range (45°→120°)</button>
-        <button class="preset-button" data-alpha="120" data-omega="45">Reverse Direction (120°→45°)</button>
       </div>
     </div>
     
@@ -271,61 +648,128 @@
     <div class="video-container">
       <video id="webcam" autoplay playsinline></video>
       <canvas id="canvas"></canvas>
-    </div>
-    
-    <div class="controls">
-      <h3>Elbow Movement Tracker</h3>
       
-      <div class="metrics">
-        <div class="metric">
-          <div class="metric-label">Current Angle</div>
-          <div id="current-angle" class="metric-value">0°</div>
+      <div class="rep-counter-overlay">
+        <div class="joint-angle-displays">
+          <!-- These will be dynamically populated based on active joints -->
         </div>
-        
-        <div class="metric">
-          <div class="metric-label">Status</div>
-          <div id="status" class="metric-value out-range">Outside Target Range</div>
-        </div>
-        
-        <div class="metric">
-          <div class="metric-label">Target Movement</div>
-          <div id="target-range" class="metric-value">160° → 45°</div>
-        </div>
-        
-        <div class="metric">
-          <div class="metric-label">Reps Completed</div>
-          <div id="rep-counter" class="metric-value">0</div>
+        <div class="rep-count">
+          <span id="rep-counter">0</span>
         </div>
       </div>
-      
-      <div class="progress-bar">
-        <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
-      </div>
-      
-      <p class="note">Move your left arm between the Alpha and Omega angles. Stay within the blue target arc.</p>
     </div>
   </div>
 
   <script>
+    // Joint Configuration Data Structure
+    const jointConfig = {
+      'left-elbow': {
+        alpha: 160,
+        omega: 45,
+        keypoints: { // MoveNet keypoint indices
+          start: 5, // left shoulder
+          middle: 7, // left elbow
+          end: 9 // left wrist
+        },
+        color: 'rgb(59, 130, 246)', // blue
+        repCount: 0,
+        hasReachedOmega: false,
+        isReadyForNextRep: true,
+        currentAngle: 0,
+        smoothedAngle: 0,
+        active: true // This is the default active joint
+      },
+      'right-elbow': {
+        alpha: 160,
+        omega: 45,
+        keypoints: {
+          start: 6, // right shoulder
+          middle: 8, // right elbow
+          end: 10 // right wrist
+        },
+        color: 'rgb(239, 68, 68)', // red
+        repCount: 0,
+        hasReachedOmega: false,
+        isReadyForNextRep: true,
+        currentAngle: 0,
+        smoothedAngle: 0,
+        active: false
+      },
+      'left-shoulder': {
+        alpha: 90,
+        omega: 180,
+        keypoints: {
+          start: 11, // left hip
+          middle: 5, // left shoulder
+          end: 7 // left elbow
+        },
+        color: 'rgb(16, 185, 129)', // green
+        repCount: 0,
+        hasReachedOmega: false,
+        isReadyForNextRep: true,
+        currentAngle: 0,
+        smoothedAngle: 0,
+        active: false
+      },
+      'right-shoulder': {
+        alpha: 90,
+        omega: 180,
+        keypoints: {
+          start: 12, // right hip
+          middle: 6, // right shoulder
+          end: 8 // right elbow
+        },
+        color: 'rgb(249, 115, 22)', // orange
+        repCount: 0,
+        hasReachedOmega: false,
+        isReadyForNextRep: true,
+        currentAngle: 0,
+        smoothedAngle: 0,
+        active: false
+      },
+      'left-knee': {
+        alpha: 170,
+        omega: 90,
+        keypoints: {
+          start: 11, // left hip
+          middle: 13, // left knee
+          end: 15 // left ankle
+        },
+        color: 'rgb(139, 92, 246)', // purple
+        repCount: 0,
+        hasReachedOmega: false,
+        isReadyForNextRep: true,
+        currentAngle: 0,
+        smoothedAngle: 0,
+        active: false
+      },
+      'right-knee': {
+        alpha: 170,
+        omega: 90,
+        keypoints: {
+          start: 12, // right hip
+          middle: 14, // right knee
+          end: 16 // right ankle
+        },
+        color: 'rgb(236, 72, 153)', // pink
+        repCount: 0,
+        hasReachedOmega: false,
+        isReadyForNextRep: true,
+        currentAngle: 0,
+        smoothedAngle: 0,
+        active: false
+      }
+    };
+
     // DOM Elements
     const webcamEl = document.getElementById('webcam');
     const canvasEl = document.getElementById('canvas');
     const loadingEl = document.getElementById('loading');
     const startButtonEl = document.getElementById('start-button');
     const statusMessageEl = document.getElementById('status-message');
-    const currentAngleEl = document.getElementById('current-angle');
-    const statusEl = document.getElementById('status');
-    const targetRangeEl = document.getElementById('target-range');
-    const progressFillEl = document.getElementById('progress-fill');
-    
-    // Angle control elements
-    const alphaAngleSlider = document.getElementById('alpha-angle');
-    const omegaAngleSlider = document.getElementById('omega-angle');
-    const alphaAngleInput = document.getElementById('alpha-angle-input');
-    const omegaAngleInput = document.getElementById('omega-angle-input');
-    const alphaAngleValue = document.getElementById('alpha-angle-value');
-    const omegaAngleValue = document.getElementById('omega-angle-value');
-    const presetButtons = document.querySelectorAll('.preset-button');
+    const repCounterEl = document.getElementById('rep-counter');
+    const jointToggles = document.querySelectorAll('input[type="checkbox"][data-joint]');
+    const jointAngleDisplaysEl = document.querySelector('.joint-angle-displays');
     
     // Add variable for tolerance
     let angleTolerance = 10; // Default tolerance in degrees
@@ -363,98 +807,87 @@
     
     // Tracking state
     let detector;
-    let elbowAngle = 0;
-    let inTargetRange = false;
+    let smoothingFactor = 0.7; // Adjust between 0-1: higher = more smoothing
     let isRunning = false;
+    let activeJoint = 'left-elbow'; // Default active joint
     
-    // Define target angle range (alpha to omega)
-    let alphaAngle = 160; // Starting angle
-    let omegaAngle = 45; // Ending angle
-    
-    // Update target range display
-    function updateTargetRangeDisplay() {
-      targetRangeEl.textContent = `${alphaAngle}° → ${omegaAngle}°`;
-    }
-    
-    updateTargetRangeDisplay();
-    
-    // Setup angle control event listeners
-    alphaAngleSlider.addEventListener('input', function() {
-      const value = parseInt(this.value);
-      alphaAngle = value;
-      alphaAngleValue.textContent = value;
-      alphaAngleInput.value = value;
-      
-      updateTargetRangeDisplay();
-    });
-    
-    omegaAngleSlider.addEventListener('input', function() {
-      const value = parseInt(this.value);
-      omegaAngle = value;
-      omegaAngleValue.textContent = value;
-      omegaAngleInput.value = value;
-      
-      updateTargetRangeDisplay();
-    });
-    
-    alphaAngleInput.addEventListener('change', function() {
-      const value = parseInt(this.value);
-      
-      // Validate input
-      if (isNaN(value) || value < 0) {
-        this.value = 0;
-        alphaAngle = 0;
-      } else if (value > 180) {
-        this.value = 180;
-        alphaAngle = 180;
-      } else {
-        alphaAngle = value;
+    // Setup joint toggle event listeners
+    jointToggles.forEach(toggle => {
+      // Set initial state based on the checkbox
+      const jointId = toggle.getAttribute('data-joint');
+      if (jointConfig[jointId]) {
+        jointConfig[jointId].active = toggle.checked;
       }
       
-      alphaAngleSlider.value = alphaAngle;
-      alphaAngleValue.textContent = alphaAngle;
-      
-      updateTargetRangeDisplay();
+      // Add event listener for changes
+      toggle.addEventListener('change', () => {
+        const jointId = toggle.getAttribute('data-joint');
+        if (jointConfig[jointId]) {
+          jointConfig[jointId].active = toggle.checked;
+          updateAngleDisplays();
+        }
+      });
     });
     
-    omegaAngleInput.addEventListener('change', function() {
-      const value = parseInt(this.value);
-      
-      // Validate input
-      if (isNaN(value) || value < 0) {
-        this.value = 0;
-        omegaAngle = 0;
-      } else if (value > 180) {
-        this.value = 180;
-        omegaAngle = 180;
-      } else {
-        omegaAngle = value;
+    // Setup all range inputs using delegation and data attributes for DRY code
+    document.addEventListener('input', function(e) {
+      if (e.target.matches('input[type="range"][data-joint][data-param]')) {
+        const joint = e.target.getAttribute('data-joint');
+        const param = e.target.getAttribute('data-param');
+        const value = parseInt(e.target.value);
+        
+        // Update the config
+        jointConfig[joint][param] = value;
+        
+        // Update the display and number input
+        document.getElementById(`${joint}-${param}-value`).textContent = value;
+        document.getElementById(`${joint}-${param}-input`).value = value;
       }
-      
-      omegaAngleSlider.value = omegaAngle;
-      omegaAngleValue.textContent = omegaAngle;
-      
-      updateTargetRangeDisplay();
+    });
+    
+    // Setup all number inputs
+    document.addEventListener('change', function(e) {
+      if (e.target.matches('input[type="number"][data-joint][data-param]')) {
+        const joint = e.target.getAttribute('data-joint');
+        const param = e.target.getAttribute('data-param');
+        let value = parseInt(e.target.value);
+        
+        // Validate input
+        if (isNaN(value) || value < 0) {
+          value = 0;
+        } else if (value > 180) {
+          value = 180;
+        }
+        
+        // Update the value
+        e.target.value = value;
+        jointConfig[joint][param] = value;
+        
+        // Update the display and range input
+        document.getElementById(`${joint}-${param}-value`).textContent = value;
+        document.getElementById(`${joint}-${param}`).value = value;
+      }
     });
     
     // Setup preset buttons
-    presetButtons.forEach(button => {
-      button.addEventListener('click', function() {
-        const alpha = parseInt(this.getAttribute('data-alpha'));
-        const omega = parseInt(this.getAttribute('data-omega'));
+    document.addEventListener('click', function(e) {
+      if (e.target.matches('.preset-button[data-joint]')) {
+        const joint = e.target.getAttribute('data-joint');
+        const alpha = parseInt(e.target.getAttribute('data-alpha'));
+        const omega = parseInt(e.target.getAttribute('data-omega'));
         
-        alphaAngle = alpha;
-        omegaAngle = omega;
+        // Update the config
+        jointConfig[joint].alpha = alpha;
+        jointConfig[joint].omega = omega;
         
-        alphaAngleSlider.value = alpha;
-        omegaAngleSlider.value = omega;
-        alphaAngleInput.value = alpha;
-        omegaAngleInput.value = omega;
-        alphaAngleValue.textContent = alpha;
-        omegaAngleValue.textContent = omega;
-        
-        updateTargetRangeDisplay();
-      });
+        // Update all UI elements
+        document.getElementById(`${joint}-alpha-value`).textContent = alpha;
+        document.getElementById(`${joint}-omega-value`).textContent = omega;
+        document.getElementById(`${joint}-alpha`).value = alpha;
+        document.getElementById(`${joint}-omega`).value = omega;
+        document.getElementById(`${joint}-alpha-input`).value = alpha;
+        document.getElementById(`${joint}-omega-input`).value = omega;
+      }
     });
     
     // Canvas setup
@@ -542,101 +975,178 @@
       }
     }
     
-    // Get progress percentage between alpha and omega
-    function getProgressPercentage(currentAngle, alpha, omega) {
-      // Get the distance between alpha and omega (handle wrap-around)
-      const totalDistance = Math.abs(omega - alpha);
-      if (totalDistance === 0) return 100; // Avoid division by zero
-      
-      // Get the distance traveled from alpha to current
-      let distanceTraveled;
-      if (alpha <= omega) {
-        // Moving in increasing direction
-        distanceTraveled = Math.max(0, Math.min(totalDistance, currentAngle - alpha));
-      } else {
-        // Moving in decreasing direction
-        distanceTraveled = Math.max(0, Math.min(totalDistance, alpha - currentAngle));
-      }
-      
-      // Calculate percentage
-      return (distanceTraveled / totalDistance) * 100;
+    // Smooth angle using exponential moving average
+    function smoothAngle(currentAngle, previousSmoothedAngle, smoothingFactor) {
+      return smoothingFactor * previousSmoothedAngle + (1 - smoothingFactor) * currentAngle;
     }
     
-    // Draw angle visualization
-    function drawAngleVisualization(ctx, shoulder, elbow, wrist, angle) {
-      // Calculate vectors
-      const upperArmVector = { 
-        x: shoulder.x - elbow.x, 
-        y: shoulder.y - elbow.y 
-      };
-      const forearmVector = { 
-        x: wrist.x - elbow.x, 
-        y: wrist.y - elbow.y 
-      };
+    // Helper function to check if an angle is within a certain range of a target
+    function isAngleCloseToTarget(angle, target, tolerance) {
+      return Math.abs(angle - target) <= tolerance;
+    }
+    
+    // Function to update the rep counter display
+    function updateRepCounter() {
+      // Sum up reps from all active joints
+      let totalReps = 0;
+      for (const joint in jointConfig) {
+        if (jointConfig[joint].active) {
+          totalReps += jointConfig[joint].repCount;
+        }
+      }
+      repCounterEl.textContent = totalReps;
+    }
+    
+    // Create angle display elements for each joint
+    function createAngleDisplays() {
+      // Clear existing displays
+      jointAngleDisplaysEl.innerHTML = '';
       
-      // Get the angle of upper arm and forearm in radians
-      // The target range arc is relative to the angle of the upper arm
-      const upperArmAngle = getAngleRadians(upperArmVector.x, upperArmVector.y);
-      const forearmAngle = getAngleRadians(forearmVector.x, forearmVector.y);
+      // Create an element for each active joint
+      for (const joint in jointConfig) {
+        if (jointConfig[joint].active) {
+          const jointDisplay = document.createElement('div');
+          jointDisplay.classList.add('joint-angle');
+          jointDisplay.id = `${joint}-display`;
+          jointDisplay.style.color = jointConfig[joint].color;
+          jointDisplay.innerHTML = `<span>${joint.replace('-', ' ')}: </span><span id="${joint}-angle">0°</span>`;
+          jointAngleDisplaysEl.appendChild(jointDisplay);
+        }
+      }
+    }
+    
+    // Update angle displays
+    function updateAngleDisplays() {
+      // First make sure displays exist for active joints
+      createAngleDisplays();
       
-      // Radius for drawing arcs
-      const radius = 50;
+      // Update each display with current angle
+      for (const joint in jointConfig) {
+        if (jointConfig[joint].active) {
+          const displayEl = document.getElementById(`${joint}-angle`);
+          if (displayEl) {
+            displayEl.textContent = `${Math.round(jointConfig[joint].smoothedAngle)}°`;
+          }
+        }
+      }
+    }
+    
+    // Draw angle visualization for a specific joint
+    function drawAngleVisualization(ctx, joint, keypoints) {
+      const config = jointConfig[joint];
+      const startPoint = keypoints[config.keypoints.start];
+      const middlePoint = keypoints[config.keypoints.middle];
+      const endPoint = keypoints[config.keypoints.end];
       
-      // Calculate where the forearm would be at alpha and omega angles
-      // The mapping is from anatomical angle (0-180°) to forearm position relative to upper arm
-      // Convert anatomical angles to arc angles
-      // 180° elbow angle = upperArmAngle + π (straight arm)
-      // 0° elbow angle = upperArmAngle (fully bent arm)(arm folded in on itself somehow)
+      // Make sure all keypoints are present with good confidence
+      if (startPoint && middlePoint && endPoint && 
+          startPoint.score > 0.3 && middlePoint.score > 0.3 && endPoint.score > 0.3) {
+        
+        // Calculate vectors
+        const vectorA = { 
+          x: startPoint.x - middlePoint.x, 
+          y: startPoint.y - middlePoint.y 
+        };
+        const vectorB = { 
+          x: endPoint.x - middlePoint.x, 
+          y: endPoint.y - middlePoint.y 
+        };
+        
+        // Get the angle in radians
+        const angleA = getAngleRadians(vectorA.x, vectorA.y);
+        const angleB = getAngleRadians(vectorB.x, vectorB.y);
+        
+        // Radius for drawing arcs
+        const radius = 30;
+        
+        // Calculate arc angles for alpha and omega
+        // We need to determine which side of the joint to draw the arc on
 
-      // Change the alpha and omega angles into the coordinate system where the upper arm is at 0 degrees
-      // This is because the upper arm is the reference frame for the target range arc
-      const alphaArcAngle = upperArmAngle + Math.PI * (alphaAngle / 180);
-      const omegaArcAngle = upperArmAngle + Math.PI * (omegaAngle / 180);
+        // Calculate cross product to determine the direction
+        const crossProduct = vectorA.x * vectorB.y - vectorA.y * vectorB.x;
 
+        // Calculate the actual angle between vectors (0 to 180 degrees)
+        const angleBetweenVectors = Math.acos(
+          (vectorA.x * vectorB.x + vectorA.y * vectorB.y) / 
+          (Math.sqrt(vectorA.x * vectorA.x + vectorA.y * vectorA.y) * 
+           Math.sqrt(vectorB.x * vectorB.x + vectorB.y * vectorB.y))
+        );
+
+        // Determine the correct direction based on the cross product
+        if (crossProduct >= 0) { // If cross product is positive, we're in the counterclockwise side
+          alphaArcAngle = angleA + Math.PI * (config.alpha / 180);
+          omegaArcAngle = angleA + Math.PI * (config.omega / 180);
+        } else { // If cross product is negative, we're in the clockwise side
+          alphaArcAngle = angleA - Math.PI * (config.alpha / 180);
+          omegaArcAngle = angleA - Math.PI * (config.omega / 180);
+        }
+        
+        // Calculate angle difference considering circle wrapping
+        let angleDiff = omegaArcAngle - alphaArcAngle;
+        if (angleDiff < 0) angleDiff += 2 * Math.PI;
+        let isClockwise = angleDiff > Math.PI;
+
+        
+        
+        // Draw target range arc
+        ctx.beginPath();
+        ctx.arc(
+          middlePoint.x, 
+          middlePoint.y, 
+          radius + 5, 
+          alphaArcAngle, 
+          omegaArcAngle, 
+          isClockwise
+        );
+        ctx.strokeStyle = config.color + '99'; // Add semi-transparency
+        ctx.lineWidth = 6;
+        ctx.stroke();
+        
+        // Draw skeleton lines with the joint's color
+        ctx.strokeStyle = config.color;
+        ctx.lineWidth = 3;
+        
+        // First segment
+        ctx.beginPath();
+        ctx.moveTo(startPoint.x, startPoint.y);
+        ctx.lineTo(middlePoint.x, middlePoint.y);
+        ctx.stroke();
+        
+        // Second segment
+        ctx.beginPath();
+        ctx.moveTo(middlePoint.x, middlePoint.y);
+        ctx.lineTo(endPoint.x, endPoint.y);
+        ctx.stroke();
+        
+        // Draw joint keypoints
+        ctx.fillStyle = config.color;
+        
+        // Start point
+        ctx.beginPath();
+        ctx.arc(startPoint.x, startPoint.y, 5, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Middle point (slightly larger)
+        ctx.beginPath();
+        ctx.arc(middlePoint.x, middlePoint.y, 6, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // End point
+        ctx.beginPath();
+        ctx.arc(endPoint.x, endPoint.y, 5, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Draw angle text near the joint if it's active
+        if (config.active) {
+          ctx.font = '16px Arial';
+          ctx.fillStyle = config.color;
+          ctx.fillText(`${Math.round(config.smoothedAngle)}°`, middlePoint.x + 15, middlePoint.y - 15);
+        }
+        
+        return true; // Indicate successful visualization
+      }
       
-      // Draw target range arc - determining the correct direction
-      // We need to decide which way to draw the arc (clockwise or counterclockwise)
-      // to ensure we're drawing the interior angle
-      
-      // Calculate angle difference considering the circle wrapping
-      let angleDiff = omegaArcAngle - alphaArcAngle;
-      if (angleDiff < 0) angleDiff += 2 * Math.PI;
-      let isClockwise = angleDiff > Math.PI;
-      
-      // Draw target range arc
-      ctx.beginPath();
-      ctx.arc(
-        elbow.x, 
-        elbow.y, 
-        radius + 10, 
-        alphaArcAngle, 
-        omegaArcAngle, 
-        isClockwise
-      );
-      ctx.strokeStyle = 'rgba(100, 100, 255, 0.6)';
-      ctx.lineWidth = 10;
-      ctx.stroke();
-      
-      // Draw angle text
-      ctx.font = '20px Arial';
-      ctx.fillStyle = 'white';
-      ctx.fillText(`${Math.round(angle)}°`, elbow.x + 20, elbow.y - 20);
-      
-      // Calculate positions for alpha/omega labels
-      let alphaTextPos = {
-        x: elbow.x + (radius + 30) * Math.cos(alphaArcAngle),
-        y: elbow.y + (radius + 30) * Math.sin(alphaArcAngle)
-      };
-      
-      let omegaTextPos = {
-        x: elbow.x + (radius + 30) * Math.cos(omegaArcAngle),
-        y: elbow.y + (radius + 30) * Math.sin(omegaArcAngle)
-      };
-      
-      ctx.font = '16px Arial';
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-      ctx.fillText(`α: ${alphaAngle}°`, alphaTextPos.x, alphaTextPos.y);
-      ctx.fillText(`ω: ${omegaAngle}°`, omegaTextPos.x, omegaTextPos.y);
+      return false; // Indicate failed visualization
     }
     
     // Draw results on canvas
@@ -654,103 +1164,77 @@
       
       // Get the first detected pose
       const pose = poses[0];
-      
-      // MoveNet uses different keypoint indices
-      // For MoveNet: 5=right_shoulder, 7=right_elbow, 9=right_wrist
       const keypoints = pose.keypoints;
       
-      const shoulder = keypoints[5];
-      const elbow = keypoints[7];
-      const wrist = keypoints[9];
+      // Process each joint configured for tracking
+      let successfulVisualizations = 0;
       
-      // Check if we have all the points we need with good confidence
-      if (shoulder && elbow && wrist && 
-          shoulder.score > 0.3 && elbow.score > 0.3 && wrist.score > 0.3) {
-        
-        // Calculate the elbow angle
-        elbowAngle = calculateAngle(shoulder, elbow, wrist);
-        inTargetRange = isAngleInRange(elbowAngle, alphaAngle, omegaAngle);
-        
-        // Draw skeleton
-        ctx.strokeStyle = 'white';
-        ctx.lineWidth = 4;
-        
-        // Upper arm
-        ctx.beginPath();
-        ctx.moveTo(shoulder.x, shoulder.y);
-        ctx.lineTo(elbow.x, elbow.y);
-        ctx.stroke();
-        
-        // Forearm
-        ctx.beginPath();
-        ctx.moveTo(elbow.x, elbow.y);
-        ctx.lineTo(wrist.x, wrist.y);
-        ctx.stroke();
-        
-        // Draw joints
-        ctx.fillStyle = 'red';
-        
-        // Shoulder joint
-        ctx.beginPath();
-        ctx.arc(shoulder.x, shoulder.y, 8, 0, 2 * Math.PI);
-        ctx.fill();
-        
-        // Elbow joint
-        ctx.beginPath();
-        ctx.arc(elbow.x, elbow.y, 8, 0, 2 * Math.PI);
-        ctx.fill();
-        
-        // Wrist joint
-        ctx.beginPath();
-        ctx.arc(wrist.x, wrist.y, 8, 0, 2 * Math.PI);
-        ctx.fill();
-        
-        // Draw angle visualization
-        drawAngleVisualization(ctx, shoulder, elbow, wrist, elbowAngle);
-      } else {
+      for (const joint in jointConfig) {
+        // Only process and visualize active joints
+        if (jointConfig[joint].active) {
+          const config = jointConfig[joint];
+          const startPoint = keypoints[config.keypoints.start];
+          const middlePoint = keypoints[config.keypoints.middle];
+          const endPoint = keypoints[config.keypoints.end];
+          
+          // Check if we have all keypoints with good confidence
+          if (startPoint && middlePoint && endPoint && 
+              startPoint.score > 0.3 && middlePoint.score > 0.3 && endPoint.score > 0.3) {
+            
+            // Calculate the angle
+            const angle = calculateAngle(startPoint, middlePoint, endPoint);
+            
+            // Store the raw angle
+            config.currentAngle = angle;
+            
+            // Apply smoothing
+            config.smoothedAngle = smoothAngle(angle, config.smoothedAngle, smoothingFactor);
+            
+            // Draw the visualization
+            if (drawAngleVisualization(ctx, joint, keypoints)) {
+              successfulVisualizations++;
+            }
+          }
+        }
+      }
+      
+      // If no joint was successfully visualized, show a message
+      if (successfulVisualizations === 0) {
         ctx.font = '24px Arial';
         ctx.fillStyle = 'white';
         ctx.textAlign = 'center';
-        ctx.fillText('Position your left arm clearly in view', canvasWidth / 2, canvasHeight / 2);
+        ctx.fillText('Position your body clearly in view', canvasWidth / 2, canvasHeight / 2);
       }
     }
     
     // Update UI elements
     function updateUI() {
-      // Update angle display
-      currentAngleEl.textContent = `${Math.round(elbowAngle)}°`;
+      // Update angle displays for all active joints
+      updateAngleDisplays();
       
-      // Update status
-      if (inTargetRange) {
-        statusEl.textContent = 'In Target Range';
-        statusEl.classList.remove('out-range');
-        statusEl.classList.add('in-range');
-      } else {
-        statusEl.textContent = 'Outside Target Range';
-        statusEl.classList.remove('in-range');
-        statusEl.classList.add('out-range');
-      }
-      
-      // Update progress bar based on movement from alpha to omega
-      const progressPercentage = getProgressPercentage(elbowAngle, alphaAngle, omegaAngle);
-      progressFillEl.style.width = `${progressPercentage}%`;
-      
-      // REP COUNTING LOGIC
-      const isAtAlpha = isAngleCloseToTarget(elbowAngle, alphaAngle, angleTolerance); // Use variable tolerance
-      const isAtOmega = isAngleCloseToTarget(elbowAngle, omegaAngle, angleTolerance); // Use variable tolerance
-      
-      // If we're at omega and haven't counted this rep yet, and we're ready for next rep
-      if (isAtOmega && !hasReachedOmega && isReadyForNextRep) {
-        hasReachedOmega = true;
-        repCount++;
-        updateRepCounter();
-        isReadyForNextRep = false; // Now we need to go back to alpha
-      }
-      
-      // If we're back at alpha after reaching omega, we're ready for the next rep
-      if (isAtAlpha && hasReachedOmega && !isReadyForNextRep) {
-        isReadyForNextRep = true;
-        hasReachedOmega = false; // Reset for next rep
+      // REP COUNTING LOGIC - Process each active joint
+      for (const joint in jointConfig) {
+        if (jointConfig[joint].active) {
+          const config = jointConfig[joint];
+          const angle = config.currentAngle; // Use raw angle for logic
+          
+          const isAtAlpha = isAngleCloseToTarget(angle, config.alpha, angleTolerance);
+          const isAtOmega = isAngleCloseToTarget(angle, config.omega, angleTolerance);
+          
+          // If we're at omega and haven't counted this rep yet, and we're ready for next rep
+          if (isAtOmega && !config.hasReachedOmega && config.isReadyForNextRep) {
+            config.hasReachedOmega = true;
+            config.repCount++;
+            updateRepCounter();
+            config.isReadyForNextRep = false; // Now we need to go back to alpha
+          }
+          
+          // If we're back at alpha after reaching omega, we're ready for the next rep
+          if (isAtAlpha && config.hasReachedOmega && !config.isReadyForNextRep) {
+            config.hasReachedOmega = false; // Reset for next rep
+            config.isReadyForNextRep = true;
+          }
+        }
       }
     }
     
@@ -791,9 +1275,15 @@
         requestAnimationFrame(detectAndRender);
       } catch (error) {
         console.error("Error in pose detection:", error);
-        statusEl.textContent = "Error: " + error.message;
+        statusMessageEl.textContent = "Error: " + error.message;
         stopDetection();
       }
+    }
+    
+    // Function to stop detection
+    function stopDetection() {
+      isRunning = false;
+      // Additional cleanup if needed
     }
     
     // Start tracking
@@ -811,9 +1301,12 @@
         statusMessageEl.textContent = 'Loading pose detection model...';
         detector = await loadPoseDetectionModel();
         
-        // Hide loading screen, show webcam (don't hide it anymore)
+        // Hide loading screen, show webcam
         loadingEl.style.display = 'none';
         webcamEl.style.display = 'block'; // Make sure webcam is visible
+        
+        // Create initial angle displays
+        createAngleDisplays();
         
         // Start the detection loop
         isRunning = true;
@@ -839,12 +1332,7 @@
         startButtonEl.style.display = 'block';
         startButtonEl.addEventListener('click', startTracking);
         
-        // Initialize rep counter variables
-        repCount = 0;
-        isReadyForNextRep = true; // Start ready for first rep
-        hasReachedOmega = false;
-        
-        // Update rep counter display
+        // Initialize rep counter
         updateRepCounter();
       } catch (error) {
         console.error('Initialization error:', error);
@@ -854,16 +1342,6 @@
     
     // Start when page is loaded
     window.onload = init;
-
-    // Helper function to check if an angle is within a certain range of a target
-    function isAngleCloseToTarget(angle, target, tolerance) {
-      return Math.abs(angle - target) <= tolerance;
-    }
-
-    // Function to update the rep counter display
-    function updateRepCounter() {
-      document.getElementById('rep-counter').textContent = repCount;
-    }
   </script>
 </body>
 </html>
