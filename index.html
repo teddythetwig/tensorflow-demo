@@ -807,9 +807,12 @@
     
     // Tracking state
     let detector;
-    let smoothingFactor = 0.7; // Adjust between 0-1: higher = more smoothing
+    let smoothingFactor = 0.85; // For angle smoothing
+    let positionSmoothingFactor = 0.7; // For keypoint position smoothing
     let isRunning = false;
     let activeJoint = 'left-elbow'; // Default active joint
+    let lastValidPoseTime = 0; // Timestamp of last valid pose detection
+    const messageDelayThreshold = 2000; // Time in ms before showing "Position your body" message
     
     // Setup joint toggle event listeners
     jointToggles.forEach(toggle => {
@@ -1059,9 +1062,6 @@
         // Radius for drawing arcs
         const radius = 30;
         
-        // Calculate arc angles for alpha and omega
-        // We need to determine which side of the joint to draw the arc on
-
         // Calculate cross product to determine the direction
         const crossProduct = vectorA.x * vectorB.y - vectorA.y * vectorB.x;
 
@@ -1093,12 +1093,12 @@
         ctx.arc(
           middlePoint.x, 
           middlePoint.y, 
-          radius + 5, 
+          radius + 20, 
           alphaArcAngle, 
           omegaArcAngle, 
           isClockwise
         );
-        ctx.strokeStyle = config.color + '99'; // Add semi-transparency
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)'; // White with some transparency
         ctx.lineWidth = 6;
         ctx.stroke();
         
@@ -1138,7 +1138,7 @@
         
         // Draw angle text near the joint if it's active
         if (config.active) {
-          ctx.font = '16px Arial';
+          ctx.font = '24px Arial'; // Increased from 16px to 24px
           ctx.fillStyle = config.color;
           ctx.fillText(`${Math.round(config.smoothedAngle)}°`, middlePoint.x + 15, middlePoint.y - 15);
         }
@@ -1155,11 +1155,7 @@
       ctx.clearRect(0, 0, canvasWidth, canvasHeight);
       
       if (!poses || poses.length === 0) {
-        ctx.font = '24px Arial';
-        ctx.fillStyle = 'white';
-        ctx.textAlign = 'center';
-        ctx.fillText('No poses detected. Make sure your body is visible.', canvasWidth / 2, canvasHeight / 2);
-        return;
+        return; // Return early without drawing - message handling is now in detectAndRender
       }
       
       // Get the first detected pose
@@ -1200,10 +1196,7 @@
       
       // If no joint was successfully visualized, show a message
       if (successfulVisualizations === 0) {
-        ctx.font = '24px Arial';
-        ctx.fillStyle = 'white';
-        ctx.textAlign = 'center';
-        ctx.fillText('Position your body clearly in view', canvasWidth / 2, canvasHeight / 2);
+        return; // Return early without drawing - message handling is now in detectAndRender
       }
     }
     
@@ -1216,7 +1209,7 @@
       for (const joint in jointConfig) {
         if (jointConfig[joint].active) {
           const config = jointConfig[joint];
-          const angle = config.currentAngle; // Use raw angle for logic
+          const angle = config.smoothedAngle; // Use smoothed angle instead of raw angle
           
           const isAtAlpha = isAngleCloseToTarget(angle, config.alpha, angleTolerance);
           const isAtOmega = isAngleCloseToTarget(angle, config.omega, angleTolerance);
@@ -1238,6 +1231,32 @@
       }
     }
     
+    // Add this function after the smoothAngle function
+    function smoothKeypoints(currentKeypoints, previousKeypoints) {
+      if (!previousKeypoints || !currentKeypoints) return currentKeypoints;
+      
+      // Create a deep copy of current keypoints to avoid modifying the original
+      const smoothedKeypoints = JSON.parse(JSON.stringify(currentKeypoints));
+      
+      // Apply smoothing to each keypoint
+      for (let i = 0; i < smoothedKeypoints.length; i++) {
+        if (previousKeypoints[i] && smoothedKeypoints[i]) {
+          // Only smooth if confidence is good
+          if (smoothedKeypoints[i].score > 0.3) {
+            smoothedKeypoints[i].x = positionSmoothingFactor * previousKeypoints[i].x + 
+                                   (1 - positionSmoothingFactor) * smoothedKeypoints[i].x;
+            smoothedKeypoints[i].y = positionSmoothingFactor * previousKeypoints[i].y + 
+                                   (1 - positionSmoothingFactor) * smoothedKeypoints[i].y;
+          }
+        }
+      }
+      
+      return smoothedKeypoints;
+    }
+    
+    // Create a variable to store the previous keypoints
+    let previousKeypoints = null;
+    
     // Main detection and rendering loop
     async function detectAndRender() {
       if (!isRunning) return;
@@ -1253,23 +1272,68 @@
         // Detect poses
         const poses = await detector.estimatePoses(webcamEl);
         
-        // Mirror the pose data directly
+        // Check if any valid pose was detected
+        let validPoseDetected = false;
+        
         if (poses && poses.length > 0) {
+          // Mirror the pose data
           poses.forEach(pose => {
-            if (pose.keypoints) {
+            if (pose.keypoints && pose.keypoints.length > 0) {
+              // Mirror the x coordinates
               pose.keypoints.forEach(keypoint => {
-                // Mirror the x coordinates relative to canvas width
                 keypoint.x = canvasEl.width - keypoint.x;
               });
+              
+              // Apply smoothing to keypoints
+              pose.keypoints = smoothKeypoints(pose.keypoints, previousKeypoints);
+              
+              // Store current keypoints for next frame
+              previousKeypoints = JSON.parse(JSON.stringify(pose.keypoints));
+              
+              // Check if we have enough valid keypoints for visualization
+              let validKeypointsCount = 0;
+              for (const joint in jointConfig) {
+                if (jointConfig[joint].active) {
+                  const config = jointConfig[joint];
+                  const startPoint = pose.keypoints[config.keypoints.start];
+                  const middlePoint = pose.keypoints[config.keypoints.middle];
+                  const endPoint = pose.keypoints[config.keypoints.end];
+                  
+                  if (startPoint && middlePoint && endPoint && 
+                      startPoint.score > 0.3 && middlePoint.score > 0.3 && endPoint.score > 0.3) {
+                    validKeypointsCount++;
+                  }
+                }
+              }
+              
+              if (validKeypointsCount > 0) {
+                validPoseDetected = true;
+                lastValidPoseTime = Date.now();
+              }
             }
           });
         }
         
-        // Now draw with normal context (no mirroring needed since data is mirrored)
-        drawResults(ctx, poses, canvasEl.width, canvasEl.height);
-        
-        // Update UI
-        updateUI();
+        // Now draw results and check if we need to show the message
+        if (validPoseDetected) {
+          drawResults(ctx, poses, canvasEl.width, canvasEl.height);
+          updateUI();
+        } else {
+          // Check if we should show the message or keep the last pose
+          const currentTime = Date.now();
+          if (currentTime - lastValidPoseTime > messageDelayThreshold) {
+            // Show the message if we've waited long enough
+            ctx.font = '24px Arial';
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'center';
+            ctx.fillText('Position your body clearly in view', canvasEl.width / 2, canvasEl.height / 2);
+          } else if (previousKeypoints) {
+            // Create a fake pose with the previous keypoints to keep displaying
+            const fakePose = { keypoints: previousKeypoints };
+            drawResults(ctx, [fakePose], canvasEl.width, canvasEl.height);
+            updateUI();
+          }
+        }
         
         // Continue the loop
         requestAnimationFrame(detectAndRender);
