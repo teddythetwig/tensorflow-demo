@@ -10,61 +10,54 @@
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@0.0.6"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       margin: 0;
       padding: 20px;
       background-color: #1a1a1a;
-      color: white;
+      color: #e0e0e0;
+      min-height: 100vh;
+      box-sizing: border-box;
     }
     
     .container {
-      max-width: 800px;
+      max-width: 1200px;
       margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
     }
     
     .video-container {
       position: relative;
-      width: 100%;
-      margin-bottom: 20px;
-      aspect-ratio: 4/3;
-      overflow: hidden;
-      border-radius: 8px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-    }
-    
-    #webcam {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transform: scaleX(-1);
+      width: 640px;
+      height: 480px;
       background-color: #000;
-      z-index: 1;
-    }
-    
-    #canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 2;
-      background-color: transparent;
-    }
-    
-    .controls {
-      background-color: #2a2a2a;
-      padding: 16px;
       border-radius: 8px;
-      margin-top: 16px;
+      overflow: hidden;
+      margin-bottom: 20px;
     }
     
-    .controls h3 {
-      margin-top: 0;
-      margin-bottom: 16px;
+    .controls-section {
+      flex: 1;
+      min-width: 280px;
+      max-width: 350px;
+      overflow-y: auto;
+      max-height: 480px;
+      background-color: #2a2a2a;
+      border-radius: 8px;
+      padding: 12px;
+    }
+    
+    .controls-section h2 {
       font-size: 18px;
+      margin: 0 0 12px 0;
+      padding-bottom: 8px;
+    }
+    
+    .controls-section h3 {
+      font-size: 16px;
+      margin: 0 0 8px 0;
     }
     
     .metrics {
@@ -117,14 +110,12 @@
     }
     
     .loading {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 300px;
-      background-color: #1a1a1a;
-      margin-bottom: 20px;
-      border-radius: 8px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      z-index: 10;
     }
     
     .loading-icon {
@@ -162,22 +153,49 @@
       background-color: #2563eb;
     }
     
-    .angle-controls {
+    .joint-toggles {
       background-color: #2a2a2a;
-      padding: 16px;
-      border-radius: 8px;
-      margin-top: 16px;
-      margin-bottom: 16px;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+    }
+    
+    .toggle-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+    
+    .toggle-label {
+      display: flex;
+      align-items: center;
+      padding: 6px 8px;
+      font-size: 13px;
+      background-color: #333;
+      border-radius: 6px;
+      margin-bottom: 4px;
+    }
+    
+    .joint-setting {
+      padding: 3px 6px;
+      margin-top: 1px;
+      margin-bottom: 6px;
+      background-color: #333;
+      border-radius: 4px;
+    }
+    
+    input[data-joint]:checked ~ .joint-setting {
+      display: block;
     }
     
     .angle-control {
-      margin-bottom: 10px;
+      margin-bottom: 4px;
     }
     
     .angle-control label {
+      font-size: 12px;
       display: block;
-      margin-bottom: 5px;
-      font-weight: bold;
+      margin-bottom: 2px;
     }
     
     .slider-container {
@@ -186,40 +204,16 @@
     }
     
     .slider-container input[type="range"] {
-      flex-grow: 1;
-      margin-right: 10px;
+      width: 100%;
+      margin: 0;
     }
     
-    .slider-container input[type="number"] {
-      width: 60px;
-      background-color: #3a3a3a;
-      color: white;
-      border: 1px solid #555;
-      border-radius: 4px;
-      padding: 5px;
+    .global-controls {
+      margin: 16px auto 0;
+      width: 100%;
+      max-width: 600px;
     }
     
-    .presets {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 15px;
-    }
-    
-    .preset-button {
-      background-color: #3a3a3a;
-      border: 1px solid #555;
-      color: white;
-      padding: 8px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 14px;
-    }
-    
-    .preset-button:hover {
-      background-color: #4a4a4a;
-    }
-
     .rep-counter-overlay {
       position: absolute;
       top: 0;
@@ -227,7 +221,7 @@
       width: 100%;
       height: 100%;
       z-index: 3;
-      pointer-events: none; /* Allow interaction with elements below */
+      pointer-events: none;
     }
 
     .current-angle {
@@ -246,11 +240,11 @@
       position: absolute;
       top: 20px;
       right: 20px;
-      font-size: 48px;
+      font-size: 96px;
       color: white;
       background-color: rgba(59, 130, 246, 0.7);
       padding: 10px 20px;
-      border-radius: 8px;
+      border-radius: 12px;
       font-weight: bold;
     }
 
@@ -310,20 +304,8 @@
       padding: 5px 8px;
     }
     
-    .global-controls {
-      margin-top: 16px;
-      background-color: #2a2a2a;
-      padding: 16px;
-      border-radius: 8px;
-    }
-    
     .joint-angle-displays {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
+      display: none;
     }
     
     .joint-angle {
@@ -385,24 +367,10 @@
       gap: 16px;
     }
     
-    .joint-setting {
-      background-color: #2a2a2a;
-      padding: 15px;
-      border-radius: 8px;
-    }
-    
-    .joint-setting h3 {
-      margin-top: 0;
-      margin-bottom: 12px;
-      font-size: 16px;
-      border-bottom: 1px solid #444;
-      padding-bottom: 8px;
-    }
-    
     .angle-controls {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 2px;
     }
     
     .angle-control {
@@ -432,197 +400,292 @@
       font-size: 12px;
       padding: 4px 8px;
     }
+
+    #webcam {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      transform: scaleX(-1);
+    }
+    
+    #canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .dual-slider {
+      position: relative;
+      height: 16px;
+      padding: 2px 0;
+      margin-bottom: 2px;
+    }
+    
+    .slider-track {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 100%;
+      height: 2px;
+      background: #444;
+      border-radius: 1px;
+    }
+    
+    .slider-range {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      height: 2px;
+      background: #3b82f6;
+      border-radius: 1px;
+    }
+    
+    .slider-handle {
+      position: absolute;
+      top: 50%;
+      width: 10px;
+      height: 10px;
+      transform: translate(-50%, -50%);
+      background: white;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 0 2px rgba(0,0,0,0.2);
+    }
+    
+    .slider-handle:hover {
+      background: #f0f0f0;
+    }
+    
+    .slider-handle.alpha {
+      background: #4ade80;
+    }
+    
+    .slider-handle.omega {
+      background: #fb923c;
+    }
+    
+    .slider-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 1px;
+      font-size: 10px;
+    }
+
+    .joint-controls {
+      width: 100%;
+      max-width: 640px;
+      margin-top: 20px;
+      background-color: #2a2a2a;
+      border-radius: 8px;
+      padding: 16px;
+    }
+    
+    h3 {
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: 15px;
+    }
+
+    /* Style the state indicator */
+    .state-indicator {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background-color: rgba(0, 0, 0, 0.6);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    
+    /* Different colors for different states */
+    .state-waiting {
+      color: #f59e0b; /* Amber */
+    }
+    
+    .state-ready {
+      color: #10b981; /* Green */
+    }
+    
+    .state-completed {
+      color: #3b82f6; /* Blue */
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>Joint Angle Tracker</h2>
+    <div class="video-container">
+      <video id="webcam" autoplay playsinline></video>
+      <canvas id="canvas"></canvas>
+      
+      <div class="rep-counter-overlay">
+        <div class="rep-count">
+          <span id="rep-counter">0</span>
+        </div>
+        <div class="state-indicator">
+          <span id="state-status">Waiting for Begin</span>
+        </div>
+      </div>
+      
+      <div id="loading" class="loading">
+        <div class="loading-icon"></div>
+        <p id="status-message">Loading TensorFlow.js...</p>
+        <button id="start-button" style="display: none;">Start Tracking</button>
+      </div>
+    </div>
     
-    <!-- Joint Angle Controls -->
     <div class="joint-controls">
       <div class="joint-toggles">
         <h3>Select Joints to Track</h3>
         <div class="toggle-grid">
-          <label class="toggle-label">
-            <input type="checkbox" data-joint="left-elbow" checked>
-            <span class="joint-name">Left Elbow</span>
-            <span class="color-dot" style="background-color: rgb(59, 130, 246);"></span>
-          </label>
-          <label class="toggle-label">
-            <input type="checkbox" data-joint="right-elbow">
-            <span class="joint-name">Right Elbow</span>
-            <span class="color-dot" style="background-color: rgb(239, 68, 68);"></span>
-          </label>
-          <label class="toggle-label">
-            <input type="checkbox" data-joint="left-shoulder">
-            <span class="joint-name">Left Shoulder</span>
-            <span class="color-dot" style="background-color: rgb(16, 185, 129);"></span>
-          </label>
-          <label class="toggle-label">
-            <input type="checkbox" data-joint="right-shoulder">
-            <span class="joint-name">Right Shoulder</span>
-            <span class="color-dot" style="background-color: rgb(249, 115, 22);"></span>
-          </label>
-          <label class="toggle-label">
-            <input type="checkbox" data-joint="left-knee">
-            <span class="joint-name">Left Knee</span>
-            <span class="color-dot" style="background-color: rgb(139, 92, 246);"></span>
-          </label>
-          <label class="toggle-label">
-            <input type="checkbox" data-joint="right-knee">
-            <span class="joint-name">Right Knee</span>
-            <span class="color-dot" style="background-color: rgb(236, 72, 153);"></span>
-          </label>
-        </div>
-      </div>
-      
-      <div class="joint-settings">
-        <!-- Left Elbow Settings -->
-        <div class="joint-setting" id="left-elbow-settings">
-          <h3>Left Elbow</h3>
-          <div class="angle-controls">
-            <div class="angle-control">
-              <label for="left-elbow-alpha">Alpha: <span id="left-elbow-alpha-value">160</span>°</label>
-              <div class="slider-container">
-                <input type="range" id="left-elbow-alpha" min="0" max="180" value="160" step="1" data-joint="left-elbow" data-param="alpha">
-                <input type="number" id="left-elbow-alpha-input" min="0" max="180" value="160" data-joint="left-elbow" data-param="alpha">
+          <!-- Left Elbow -->
+          <div>
+            <label class="toggle-label">
+              <input type="checkbox" data-joint="left-elbow" checked>
+              <span class="joint-name">Left Elbow</span>
+              <span class="color-dot" style="background-color: rgb(59, 130, 246);"></span>
+            </label>
+            
+            <div class="joint-setting" id="left-elbow-settings">
+              <div class="angle-controls">
+                <div class="slider-labels">
+                  <span>Begin: <span id="left-elbow-alpha-value">160</span>°</span>
+                  <span>End: <span id="left-elbow-omega-value">45</span>°</span>
+                </div>
+                <div class="dual-slider" id="left-elbow-slider">
+                  <div class="slider-track"></div>
+                  <div class="slider-range"></div>
+                  <div class="slider-handle alpha" data-value="160"></div>
+                  <div class="slider-handle omega" data-value="45"></div>
+                </div>
               </div>
-            </div>
-            <div class="angle-control">
-              <label for="left-elbow-omega">Omega: <span id="left-elbow-omega-value">45</span>°</label>
-              <div class="slider-container">
-                <input type="range" id="left-elbow-omega" min="0" max="180" value="45" step="1" data-joint="left-elbow" data-param="omega">
-                <input type="number" id="left-elbow-omega-input" min="0" max="180" value="45" data-joint="left-elbow" data-param="omega">
-              </div>
-            </div>
-            <div class="compact-presets">
-              <button class="preset-button" data-joint="left-elbow" data-alpha="160" data-omega="45">160°→45°</button>
-              <button class="preset-button" data-joint="left-elbow" data-alpha="45" data-omega="160">45°→160°</button>
             </div>
           </div>
-        </div>
-        
-        <!-- Right Elbow Settings -->
-        <div class="joint-setting" id="right-elbow-settings">
-          <h3>Right Elbow</h3>
-          <div class="angle-controls">
-            <div class="angle-control">
-              <label for="right-elbow-alpha">Alpha: <span id="right-elbow-alpha-value">160</span>°</label>
-              <div class="slider-container">
-                <input type="range" id="right-elbow-alpha" min="0" max="180" value="160" step="1" data-joint="right-elbow" data-param="alpha">
-                <input type="number" id="right-elbow-alpha-input" min="0" max="180" value="160" data-joint="right-elbow" data-param="alpha">
+          
+          <!-- Right Elbow -->
+          <div>
+            <label class="toggle-label">
+              <input type="checkbox" data-joint="right-elbow">
+              <span class="joint-name">Right Elbow</span>
+              <span class="color-dot" style="background-color: rgb(239, 68, 68);"></span>
+            </label>
+            
+            <div class="joint-setting" id="right-elbow-settings">
+              <div class="angle-controls">
+                <div class="slider-labels">
+                  <span>Begin: <span id="right-elbow-alpha-value">160</span>°</span>
+                  <span>End: <span id="right-elbow-omega-value">45</span>°</span>
+                </div>
+                <div class="dual-slider" id="right-elbow-slider">
+                  <div class="slider-track"></div>
+                  <div class="slider-range"></div>
+                  <div class="slider-handle alpha" data-value="160"></div>
+                  <div class="slider-handle omega" data-value="45"></div>
+                </div>
               </div>
-            </div>
-            <div class="angle-control">
-              <label for="right-elbow-omega">Omega: <span id="right-elbow-omega-value">45</span>°</label>
-              <div class="slider-container">
-                <input type="range" id="right-elbow-omega" min="0" max="180" value="45" step="1" data-joint="right-elbow" data-param="omega">
-                <input type="number" id="right-elbow-omega-input" min="0" max="180" value="45" data-joint="right-elbow" data-param="omega">
-              </div>
-            </div>
-            <div class="compact-presets">
-              <button class="preset-button" data-joint="right-elbow" data-alpha="160" data-omega="45">160°→45°</button>
-              <button class="preset-button" data-joint="right-elbow" data-alpha="45" data-omega="160">45°→160°</button>
             </div>
           </div>
-        </div>
-        
-        <!-- Left Shoulder Settings -->
-        <div class="joint-setting" id="left-shoulder-settings">
-          <h3>Left Shoulder</h3>
-          <div class="angle-controls">
-            <div class="angle-control">
-              <label for="left-shoulder-alpha">Alpha: <span id="left-shoulder-alpha-value">90</span>°</label>
-              <div class="slider-container">
-                <input type="range" id="left-shoulder-alpha" min="0" max="180" value="90" step="1" data-joint="left-shoulder" data-param="alpha">
-                <input type="number" id="left-shoulder-alpha-input" min="0" max="180" value="90" data-joint="left-shoulder" data-param="alpha">
+          
+          <!-- Left Shoulder -->
+          <div>
+            <label class="toggle-label">
+              <input type="checkbox" data-joint="left-shoulder">
+              <span class="joint-name">Left Shoulder</span>
+              <span class="color-dot" style="background-color: rgb(16, 185, 129);"></span>
+            </label>
+            
+            <div class="joint-setting" id="left-shoulder-settings">
+              <div class="angle-controls">
+                <div class="slider-labels">
+                  <span>Begin: <span id="left-shoulder-alpha-value">90</span>°</span>
+                  <span>End: <span id="left-shoulder-omega-value">180</span>°</span>
+                </div>
+                <div class="dual-slider" id="left-shoulder-slider">
+                  <div class="slider-track"></div>
+                  <div class="slider-range"></div>
+                  <div class="slider-handle alpha" data-value="90"></div>
+                  <div class="slider-handle omega" data-value="180"></div>
+                </div>
               </div>
-            </div>
-            <div class="angle-control">
-              <label for="left-shoulder-omega">Omega: <span id="left-shoulder-omega-value">180</span>°</label>
-              <div class="slider-container">
-                <input type="range" id="left-shoulder-omega" min="0" max="180" value="180" step="1" data-joint="left-shoulder" data-param="omega">
-                <input type="number" id="left-shoulder-omega-input" min="0" max="180" value="180" data-joint="left-shoulder" data-param="omega">
-              </div>
-            </div>
-            <div class="compact-presets">
-              <button class="preset-button" data-joint="left-shoulder" data-alpha="90" data-omega="180">90°→180°</button>
-              <button class="preset-button" data-joint="left-shoulder" data-alpha="180" data-omega="90">180°→90°</button>
             </div>
           </div>
-        </div>
-        
-        <!-- Right Shoulder Settings -->
-        <div class="joint-setting" id="right-shoulder-settings">
-          <h3>Right Shoulder</h3>
-          <div class="angle-controls">
-            <div class="angle-control">
-              <label for="right-shoulder-alpha">Alpha: <span id="right-shoulder-alpha-value">90</span>°</label>
-              <div class="slider-container">
-                <input type="range" id="right-shoulder-alpha" min="0" max="180" value="90" step="1" data-joint="right-shoulder" data-param="alpha">
-                <input type="number" id="right-shoulder-alpha-input" min="0" max="180" value="90" data-joint="right-shoulder" data-param="alpha">
+          
+          <!-- Right Shoulder -->
+          <div>
+            <label class="toggle-label">
+              <input type="checkbox" data-joint="right-shoulder">
+              <span class="joint-name">Right Shoulder</span>
+              <span class="color-dot" style="background-color: rgb(249, 115, 22);"></span>
+            </label>
+            
+            <div class="joint-setting" id="right-shoulder-settings">
+              <div class="angle-controls">
+                <div class="slider-labels">
+                  <span>Begin: <span id="right-shoulder-alpha-value">90</span>°</span>
+                  <span>End: <span id="right-shoulder-omega-value">180</span>°</span>
+                </div>
+                <div class="dual-slider" id="right-shoulder-slider">
+                  <div class="slider-track"></div>
+                  <div class="slider-range"></div>
+                  <div class="slider-handle alpha" data-value="90"></div>
+                  <div class="slider-handle omega" data-value="180"></div>
+                </div>
               </div>
-            </div>
-            <div class="angle-control">
-              <label for="right-shoulder-omega">Omega: <span id="right-shoulder-omega-value">180</span>°</label>
-              <div class="slider-container">
-                <input type="range" id="right-shoulder-omega" min="0" max="180" value="180" step="1" data-joint="right-shoulder" data-param="omega">
-                <input type="number" id="right-shoulder-omega-input" min="0" max="180" value="180" data-joint="right-shoulder" data-param="omega">
-              </div>
-            </div>
-            <div class="compact-presets">
-              <button class="preset-button" data-joint="right-shoulder" data-alpha="90" data-omega="180">90°→180°</button>
-              <button class="preset-button" data-joint="right-shoulder" data-alpha="180" data-omega="90">180°→90°</button>
             </div>
           </div>
-        </div>
-        
-        <!-- Left Knee Settings -->
-        <div class="joint-setting" id="left-knee-settings">
-          <h3>Left Knee</h3>
-          <div class="angle-controls">
-            <div class="angle-control">
-              <label for="left-knee-alpha">Alpha: <span id="left-knee-alpha-value">170</span>°</label>
-              <div class="slider-container">
-                <input type="range" id="left-knee-alpha" min="0" max="180" value="170" step="1" data-joint="left-knee" data-param="alpha">
-                <input type="number" id="left-knee-alpha-input" min="0" max="180" value="170" data-joint="left-knee" data-param="alpha">
+          
+          <!-- Left Knee -->
+          <div>
+            <label class="toggle-label">
+              <input type="checkbox" data-joint="left-knee">
+              <span class="joint-name">Left Knee</span>
+              <span class="color-dot" style="background-color: rgb(139, 92, 246);"></span>
+            </label>
+            
+            <div class="joint-setting" id="left-knee-settings">
+              <div class="angle-controls">
+                <div class="slider-labels">
+                  <span>Begin: <span id="left-knee-alpha-value">170</span>°</span>
+                  <span>End: <span id="left-knee-omega-value">90</span>°</span>
+                </div>
+                <div class="dual-slider" id="left-knee-slider">
+                  <div class="slider-track"></div>
+                  <div class="slider-range"></div>
+                  <div class="slider-handle alpha" data-value="170"></div>
+                  <div class="slider-handle omega" data-value="90"></div>
+                </div>
               </div>
-            </div>
-            <div class="angle-control">
-              <label for="left-knee-omega">Omega: <span id="left-knee-omega-value">90</span>°</label>
-              <div class="slider-container">
-                <input type="range" id="left-knee-omega" min="0" max="180" value="90" step="1" data-joint="left-knee" data-param="omega">
-                <input type="number" id="left-knee-omega-input" min="0" max="180" value="90" data-joint="left-knee" data-param="omega">
-              </div>
-            </div>
-            <div class="compact-presets">
-              <button class="preset-button" data-joint="left-knee" data-alpha="170" data-omega="90">170°→90°</button>
-              <button class="preset-button" data-joint="left-knee" data-alpha="90" data-omega="170">90°→170°</button>
             </div>
           </div>
-        </div>
-        
-        <!-- Right Knee Settings -->
-        <div class="joint-setting" id="right-knee-settings">
-          <h3>Right Knee</h3>
-          <div class="angle-controls">
-            <div class="angle-control">
-              <label for="right-knee-alpha">Alpha: <span id="right-knee-alpha-value">170</span>°</label>
-              <div class="slider-container">
-                <input type="range" id="right-knee-alpha" min="0" max="180" value="170" step="1" data-joint="right-knee" data-param="alpha">
-                <input type="number" id="right-knee-alpha-input" min="0" max="180" value="170" data-joint="right-knee" data-param="alpha">
+          
+          <!-- Right Knee -->
+          <div>
+            <label class="toggle-label">
+              <input type="checkbox" data-joint="right-knee">
+              <span class="joint-name">Right Knee</span>
+              <span class="color-dot" style="background-color: rgb(236, 72, 153);"></span>
+            </label>
+            
+            <div class="joint-setting" id="right-knee-settings">
+              <div class="angle-controls">
+                <div class="slider-labels">
+                  <span>Begin: <span id="right-knee-alpha-value">170</span>°</span>
+                  <span>End: <span id="right-knee-omega-value">90</span>°</span>
+                </div>
+                <div class="dual-slider" id="right-knee-slider">
+                  <div class="slider-track"></div>
+                  <div class="slider-range"></div>
+                  <div class="slider-handle alpha" data-value="170"></div>
+                  <div class="slider-handle omega" data-value="90"></div>
+                </div>
               </div>
-            </div>
-            <div class="angle-control">
-              <label for="right-knee-omega">Omega: <span id="right-knee-omega-value">90</span>°</label>
-              <div class="slider-container">
-                <input type="range" id="right-knee-omega" min="0" max="180" value="90" step="1" data-joint="right-knee" data-param="omega">
-                <input type="number" id="right-knee-omega-input" min="0" max="180" value="90" data-joint="right-knee" data-param="omega">
-              </div>
-            </div>
-            <div class="compact-presets">
-              <button class="preset-button" data-joint="right-knee" data-alpha="170" data-omega="90">170°→90°</button>
-              <button class="preset-button" data-joint="right-knee" data-alpha="90" data-omega="170">90°→170°</button>
             </div>
           </div>
         </div>
@@ -633,28 +696,7 @@
           <label for="angle-tolerance">Detection Tolerance: <span id="angle-tolerance-value">10</span>°</label>
           <div class="slider-container">
             <input type="range" id="angle-tolerance" min="1" max="30" value="10" step="1">
-            <input type="number" id="angle-tolerance-input" min="1" max="30" value="10">
           </div>
-        </div>
-      </div>
-    </div>
-    
-    <div id="loading" class="loading">
-      <div class="loading-icon"></div>
-      <p id="status-message">Loading TensorFlow.js...</p>
-      <button id="start-button" style="display: none;">Start Tracking</button>
-    </div>
-    
-    <div class="video-container">
-      <video id="webcam" autoplay playsinline></video>
-      <canvas id="canvas"></canvas>
-      
-      <div class="rep-counter-overlay">
-        <div class="joint-angle-displays">
-          <!-- These will be dynamically populated based on active joints -->
-        </div>
-        <div class="rep-count">
-          <span id="rep-counter">0</span>
         </div>
       </div>
     </div>
@@ -666,31 +708,31 @@
       'left-elbow': {
         alpha: 160,
         omega: 45,
-        keypoints: { // MoveNet keypoint indices
-          start: 5, // left shoulder
-          middle: 7, // left elbow
-          end: 9 // left wrist
+        keypoints: {
+          start: 5,
+          middle: 7,
+          end: 9
         },
-        color: 'rgb(59, 130, 246)', // blue
+        color: 'rgb(59, 130, 246)',
         repCount: 0,
         hasReachedOmega: false,
-        isReadyForNextRep: true,
+        isReadyForNextRep: false,
         currentAngle: 0,
         smoothedAngle: 0,
-        active: true // This is the default active joint
+        active: true
       },
       'right-elbow': {
         alpha: 160,
         omega: 45,
         keypoints: {
-          start: 6, // right shoulder
-          middle: 8, // right elbow
-          end: 10 // right wrist
+          start: 6,
+          middle: 8,
+          end: 10
         },
-        color: 'rgb(239, 68, 68)', // red
+        color: 'rgb(239, 68, 68)',
         repCount: 0,
         hasReachedOmega: false,
-        isReadyForNextRep: true,
+        isReadyForNextRep: false,
         currentAngle: 0,
         smoothedAngle: 0,
         active: false
@@ -699,14 +741,14 @@
         alpha: 90,
         omega: 180,
         keypoints: {
-          start: 11, // left hip
-          middle: 5, // left shoulder
-          end: 7 // left elbow
+          start: 11,
+          middle: 5,
+          end: 7
         },
-        color: 'rgb(16, 185, 129)', // green
+        color: 'rgb(16, 185, 129)',
         repCount: 0,
         hasReachedOmega: false,
-        isReadyForNextRep: true,
+        isReadyForNextRep: false,
         currentAngle: 0,
         smoothedAngle: 0,
         active: false
@@ -715,14 +757,14 @@
         alpha: 90,
         omega: 180,
         keypoints: {
-          start: 12, // right hip
-          middle: 6, // right shoulder
-          end: 8 // right elbow
+          start: 12,
+          middle: 6,
+          end: 8
         },
-        color: 'rgb(249, 115, 22)', // orange
+        color: 'rgb(249, 115, 22)',
         repCount: 0,
         hasReachedOmega: false,
-        isReadyForNextRep: true,
+        isReadyForNextRep: false,
         currentAngle: 0,
         smoothedAngle: 0,
         active: false
@@ -731,14 +773,14 @@
         alpha: 170,
         omega: 90,
         keypoints: {
-          start: 11, // left hip
-          middle: 13, // left knee
-          end: 15 // left ankle
+          start: 11,
+          middle: 13,
+          end: 15
         },
-        color: 'rgb(139, 92, 246)', // purple
+        color: 'rgb(139, 92, 246)',
         repCount: 0,
         hasReachedOmega: false,
-        isReadyForNextRep: true,
+        isReadyForNextRep: false,
         currentAngle: 0,
         smoothedAngle: 0,
         active: false
@@ -747,14 +789,14 @@
         alpha: 170,
         omega: 90,
         keypoints: {
-          start: 12, // right hip
-          middle: 14, // right knee
-          end: 16 // right ankle
+          start: 12,
+          middle: 14,
+          end: 16
         },
-        color: 'rgb(236, 72, 153)', // pink
+        color: 'rgb(236, 72, 153)',
         repCount: 0,
         hasReachedOmega: false,
-        isReadyForNextRep: true,
+        isReadyForNextRep: false,
         currentAngle: 0,
         smoothedAngle: 0,
         active: false
@@ -772,11 +814,10 @@
     const jointAngleDisplaysEl = document.querySelector('.joint-angle-displays');
     
     // Add variable for tolerance
-    let angleTolerance = 10; // Default tolerance in degrees
+    let angleTolerance = 10;
     
     // Add the tolerance control elements
     const angleToleranceSlider = document.getElementById('angle-tolerance');
-    const angleToleranceInput = document.getElementById('angle-tolerance-input');
     const angleToleranceValue = document.getElementById('angle-tolerance-value');
     
     // Setup tolerance control event listeners
@@ -784,47 +825,33 @@
       const value = parseInt(this.value);
       angleTolerance = value;
       angleToleranceValue.textContent = value;
-      angleToleranceInput.value = value;
-    });
-    
-    angleToleranceInput.addEventListener('change', function() {
-      const value = parseInt(this.value);
-      
-      // Validate input
-      if (isNaN(value) || value < 1) {
-        this.value = 1;
-        angleTolerance = 1;
-      } else if (value > 30) {
-        this.value = 30;
-        angleTolerance = 30;
-      } else {
-        angleTolerance = value;
-      }
-      
-      angleToleranceSlider.value = angleTolerance;
-      angleToleranceValue.textContent = angleTolerance;
     });
     
     // Tracking state
     let detector;
-    let smoothingFactor = 0.85; // For angle smoothing
-    let positionSmoothingFactor = 0.7; // For keypoint position smoothing
+    let smoothingFactor = 0.85;
+    let positionSmoothingFactor = 0.7;
     let isRunning = false;
-    let activeJoint = 'left-elbow'; // Default active joint
-    let lastValidPoseTime = 0; // Timestamp of last valid pose detection
-    const messageDelayThreshold = 2000; // Time in ms before showing "Position your body" message
+    let activeJoint = 'left-elbow';
+    let lastValidPoseTime = 0;
+    const messageDelayThreshold = 2000;
     
     // Setup joint toggle event listeners
     jointToggles.forEach(toggle => {
-      // Set initial state based on the checkbox
       const jointId = toggle.getAttribute('data-joint');
-      if (jointConfig[jointId]) {
-        jointConfig[jointId].active = toggle.checked;
+      const settingsEl = document.getElementById(`${jointId}-settings`);
+      
+      // Set initial state
+      if (settingsEl) {
+        settingsEl.style.display = toggle.checked ? 'block' : 'none';
       }
       
-      // Add event listener for changes
+      // Add change event listener
       toggle.addEventListener('change', () => {
-        const jointId = toggle.getAttribute('data-joint');
+        if (settingsEl) {
+          settingsEl.style.display = toggle.checked ? 'block' : 'none';
+        }
+        
         if (jointConfig[jointId]) {
           jointConfig[jointId].active = toggle.checked;
           updateAngleDisplays();
@@ -1002,36 +1029,20 @@
     
     // Create angle display elements for each joint
     function createAngleDisplays() {
-      // Clear existing displays
-      jointAngleDisplaysEl.innerHTML = '';
-      
-      // Create an element for each active joint
-      for (const joint in jointConfig) {
-        if (jointConfig[joint].active) {
-          const jointDisplay = document.createElement('div');
-          jointDisplay.classList.add('joint-angle');
-          jointDisplay.id = `${joint}-display`;
-          jointDisplay.style.color = jointConfig[joint].color;
-          jointDisplay.innerHTML = `<span>${joint.replace('-', ' ')}: </span><span id="${joint}-angle">0°</span>`;
-          jointAngleDisplaysEl.appendChild(jointDisplay);
-        }
-      }
+      // Function emptied to prevent creating angle displays
+      return;
     }
     
     // Update angle displays
     function updateAngleDisplays() {
-      // First make sure displays exist for active joints
-      createAngleDisplays();
-      
-      // Update each display with current angle
+      // Keep only the part that updates active status in jointConfig
       for (const joint in jointConfig) {
-        if (jointConfig[joint].active) {
-          const displayEl = document.getElementById(`${joint}-angle`);
-          if (displayEl) {
-            displayEl.textContent = `${Math.round(jointConfig[joint].smoothedAngle)}°`;
-          }
+        const toggle = document.querySelector(`input[data-joint="${joint}"]`);
+        if (toggle) {
+          jointConfig[joint].active = toggle.checked;
         }
       }
+      // Don't update any displays
     }
     
     // Draw angle visualization for a specific joint
@@ -1102,9 +1113,9 @@
         ctx.lineWidth = 6;
         ctx.stroke();
         
-        // Draw skeleton lines with the joint's color
+        // Draw skeleton lines with the joint's color - BOLDER LINES
         ctx.strokeStyle = config.color;
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 6; // Increased from 3 to 6 for bolder lines
         
         // First segment
         ctx.beginPath();
@@ -1118,29 +1129,29 @@
         ctx.lineTo(endPoint.x, endPoint.y);
         ctx.stroke();
         
-        // Draw joint keypoints
+        // Draw joint keypoints - LARGER DOTS
         ctx.fillStyle = config.color;
         
         // Start point
         ctx.beginPath();
-        ctx.arc(startPoint.x, startPoint.y, 5, 0, 2 * Math.PI);
+        ctx.arc(startPoint.x, startPoint.y, 8, 0, 2 * Math.PI); // Increased from 5 to 8
         ctx.fill();
         
         // Middle point (slightly larger)
         ctx.beginPath();
-        ctx.arc(middlePoint.x, middlePoint.y, 6, 0, 2 * Math.PI);
+        ctx.arc(middlePoint.x, middlePoint.y, 10, 0, 2 * Math.PI); // Increased from 6 to 10
         ctx.fill();
         
         // End point
         ctx.beginPath();
-        ctx.arc(endPoint.x, endPoint.y, 5, 0, 2 * Math.PI);
+        ctx.arc(endPoint.x, endPoint.y, 8, 0, 2 * Math.PI); // Increased from 5 to 8
         ctx.fill();
         
-        // Draw angle text near the joint if it's active
+        // Draw angle text near the joint if it's active - LARGER TEXT
         if (config.active) {
-          ctx.font = '24px Arial'; // Increased from 16px to 24px
+          ctx.font = '48px Arial'; // Increased from 24px to 48px (2x larger)
           ctx.fillStyle = config.color;
-          ctx.fillText(`${Math.round(config.smoothedAngle)}°`, middlePoint.x + 15, middlePoint.y - 15);
+          ctx.fillText(`${Math.round(config.smoothedAngle)}°`, middlePoint.x + 20, middlePoint.y - 20);
         }
         
         return true; // Indicate successful visualization
@@ -1406,6 +1417,236 @@
     
     // Start when page is loaded
     window.onload = init;
+
+    // Add this to your existing JavaScript
+    function initializeDualSliders() {
+      document.querySelectorAll('.dual-slider').forEach(slider => {
+        const track = slider.querySelector('.slider-track');
+        const range = slider.querySelector('.slider-range');
+        const handles = slider.querySelectorAll('.slider-handle');
+        const joint = slider.id.split('-slider')[0];
+        
+        let activeHandle = null;
+        
+        function updateSlider(handle, value) {
+          const percent = (value / 180) * 100;
+          handle.style.left = `${percent}%`;
+          handle.dataset.value = value;
+          
+          // Update range bar
+          const alpha = parseInt(handles[0].dataset.value);
+          const omega = parseInt(handles[1].dataset.value);
+          const left = Math.min(alpha, omega) / 180 * 100;
+          const right = Math.max(alpha, omega) / 180 * 100;
+          range.style.left = `${left}%`;
+          range.style.width = `${right - left}%`;
+          
+          // Update value displays
+          document.getElementById(`${joint}-alpha-value`).textContent = Math.round(alpha);
+          document.getElementById(`${joint}-omega-value`).textContent = Math.round(omega);
+          
+          // Update joint config
+          if (jointConfig[joint]) {
+            if (handle.classList.contains('alpha')) {
+              jointConfig[joint].alpha = value;
+            } else {
+              jointConfig[joint].omega = value;
+            }
+          }
+        }
+        
+        handles.forEach(handle => {
+          handle.addEventListener('mousedown', e => {
+            e.preventDefault(); // Prevent text selection
+            activeHandle = handle;
+            document.addEventListener('mousemove', handleDrag);
+            document.addEventListener('mouseup', () => {
+              activeHandle = null;
+              document.removeEventListener('mousemove', handleDrag);
+            });
+          });
+        });
+        
+        function handleDrag(e) {
+          if (!activeHandle) return;
+          
+          const rect = track.getBoundingClientRect();
+          let value = ((e.clientX - rect.left) / rect.width) * 180;
+          value = Math.max(0, Math.min(180, value));
+          updateSlider(activeHandle, value);
+        }
+        
+        // Initialize positions
+        handles.forEach(handle => {
+          updateSlider(handle, parseInt(handle.dataset.value));
+        });
+      });
+    }
+
+    // Call this after your page loads
+    document.addEventListener('DOMContentLoaded', () => {
+      initializeDualSliders();
+    });
+
+    // Create a single global rep counter
+    let globalRepCount = 0;
+
+    // Update the rep counting mechanism
+    let repState = {
+      allJointsReady: false,
+      allJointsCompleted: false,
+      lastRepTime: 0 // Track time of last rep for debouncing
+    };
+
+    // Make sure jointConfig initialization doesn't include per-joint rep counts
+    function initializeJointConfig() {
+      // For each joint in the config
+      for (const joint in jointConfig) {
+        // Make sure both state flags are properly initialized
+        jointConfig[joint].isReadyForNextRep = false; // Start as not ready
+        jointConfig[joint].hasReachedOmega = false;
+        // Remove individual joint rep counts
+        if (jointConfig[joint].hasOwnProperty('repCount')) {
+          delete jointConfig[joint].repCount;
+        }
+      }
+    }
+
+    // Initialize the rep counter display
+    function updateRepCounter() {
+      document.getElementById('rep-counter').textContent = globalRepCount;
+    }
+
+    // Update the rep counting function to maintain state correctly
+    function updateRepCount() {
+      // Get all active joints
+      const activeJoints = Object.keys(jointConfig).filter(joint => jointConfig[joint].active);
+      
+      if (activeJoints.length === 0) {
+        // No active joints
+        document.getElementById('state-status').textContent = "No joints selected";
+        return;
+      }
+      
+      // Check if all joints are at their Begin position (alpha)
+      const allAtBegin = activeJoints.every(joint => {
+        const angle = jointConfig[joint].smoothedAngle;
+        return isAngleCloseToTarget(angle, jointConfig[joint].alpha, angleTolerance);
+      });
+      
+      // Check if all joints are at their End position (omega)
+      const allAtEnd = activeJoints.every(joint => {
+        const angle = jointConfig[joint].smoothedAngle;
+        return isAngleCloseToTarget(angle, jointConfig[joint].omega, angleTolerance);
+      });
+      
+      // STATE MACHINE:
+      
+      // PHASE 1: Wait for all joints to reach Begin position
+      if (allAtBegin && !repState.allJointsReady && !repState.allJointsCompleted) {
+        repState.allJointsReady = true;
+        console.log("All joints at BEGIN position - ready for rep");
+      }
+      
+      // PHASE 2: All joints were at Begin, now all are at End - COUNT REP
+      if (allAtEnd && repState.allJointsReady && !repState.allJointsCompleted) {
+        const now = Date.now();
+        if (now - repState.lastRepTime > 500) { // Debounce
+          // Increment the global rep counter
+          globalRepCount++;
+          updateRepCounter();
+          
+          // Mark as completed
+          repState.allJointsCompleted = true;
+          repState.lastRepTime = now;
+          console.log("Rep counted!");
+        }
+      }
+      
+      // PHASE 3: After counting a rep, wait for all joints to return to Begin before allowing next rep
+      if (allAtBegin && repState.allJointsCompleted) {
+        // Reset for next rep cycle
+        repState.allJointsReady = true;
+        repState.allJointsCompleted = false;
+        console.log("Reset for next rep");
+      }
+      
+      // Once we're in the ready state, we stay there until completion
+      // We'll only reset to waiting if explicitly required
+      
+      // Update the state display
+      updateStateDisplay();
+    }
+
+    // Make sure the rep counter is initialized on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      initializeJointConfig();
+      globalRepCount = 0;
+      updateRepCounter();
+      // ... other initialization code ...
+    });
+
+    // Reset button functionality if you have one
+    function resetRepCounter() {
+      globalRepCount = 0;
+      updateRepCounter();
+    }
+
+    // Add function to update the state display
+    function updateStateDisplay() {
+      const stateElement = document.getElementById('state-status');
+      
+      if (!stateElement) return;
+      
+      // Remove all state classes
+      stateElement.classList.remove('state-waiting', 'state-ready', 'state-completed');
+      
+      // Set appropriate state message and class
+      if (!repState.allJointsReady && !repState.allJointsCompleted) {
+        stateElement.textContent = "Waiting for Begin";
+        stateElement.classList.add('state-waiting');
+      } 
+      else if (repState.allJointsReady && !repState.allJointsCompleted) {
+        stateElement.textContent = "Ready - Go to End";
+        stateElement.classList.add('state-ready');
+      }
+      else if (repState.allJointsCompleted) {
+        stateElement.textContent = "Completed - Return to Begin";
+        stateElement.classList.add('state-completed');
+      }
+    }
+
+    // Alternatively, if you can't directly edit the above function, find where angles are updated
+    // and add the rep counter call there
+
+    // Another approach: hook into the rendering loop
+    function hookIntoRenderLoop() {
+      const originalRenderFunction = window.requestAnimationFrame;
+      
+      window.requestAnimationFrame = function(callback) {
+        return originalRenderFunction.call(window, function(timestamp) {
+          // Call the original callback
+          callback(timestamp);
+          
+          // Then call our rep counter update
+          updateRepCount();
+        });
+      };
+    }
+
+    // Or, set up a separate loop for the rep counter
+    function startRepCounterLoop() {
+      setInterval(updateRepCount, 100); // Check rep state 10 times per second
+    }
+
+    // Add this to your initialization code
+    document.addEventListener('DOMContentLoaded', function() {
+      // ... existing initialization ...
+      
+      // Choose one of these methods to ensure updateRepCount is called:
+      // hookIntoRenderLoop();
+      startRepCounterLoop();
+    });
   </script>
 </body>
 </html>
