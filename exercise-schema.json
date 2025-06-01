@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Exercise Motion Schema (MoveNet Compatible)",
+  "type": "object",
+  "patternProperties": {
+    "^.*$": {
+      "description": "Exercise name as key",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Descriptive name for this stage of the exercise"
+          },
+          "movements": {
+            "type": "object",
+            "description": "Joint movements performed in parallel during this stage",
+            "properties": {
+              "nose": {"$ref": "#/definitions/joint_movement"},
+              "left_eye": {"$ref": "#/definitions/joint_movement"},
+              "right_eye": {"$ref": "#/definitions/joint_movement"},
+              "left_ear": {"$ref": "#/definitions/joint_movement"},
+              "right_ear": {"$ref": "#/definitions/joint_movement"},
+              "left_shoulder": {"$ref": "#/definitions/joint_movement"},
+              "right_shoulder": {"$ref": "#/definitions/joint_movement"},
+              "left_elbow": {"$ref": "#/definitions/joint_movement"},
+              "right_elbow": {"$ref": "#/definitions/joint_movement"},
+              "left_wrist": {"$ref": "#/definitions/joint_movement"},
+              "right_wrist": {"$ref": "#/definitions/joint_movement"},
+              "left_hip": {"$ref": "#/definitions/joint_movement"},
+              "right_hip": {"$ref": "#/definitions/joint_movement"},
+              "left_knee": {"$ref": "#/definitions/joint_movement"},
+              "right_knee": {"$ref": "#/definitions/joint_movement"},
+              "left_ankle": {"$ref": "#/definitions/joint_movement"},
+              "right_ankle": {"$ref": "#/definitions/joint_movement"}
+            },
+            "additionalProperties": false,
+            "minProperties": 1
+          }
+        },
+        "required": ["name", "movements"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "definitions": {
+    "joint_movement": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "number",
+          "description": "Starting angle in degrees (or position for face keypoints)"
+        },
+        "end": {
+          "type": "number",
+          "description": "Ending angle in degrees (or position for face keypoints)"
+        }
+      },
+      "required": ["start", "end"],
+      "additionalProperties": false
+    }
+  }
+} 

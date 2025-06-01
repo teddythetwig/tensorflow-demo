@@ -517,6 +517,137 @@
     .state-completed {
       color: #3b82f6; /* Blue */
     }
+
+    .exercise-selection {
+      margin-bottom: 20px;
+      padding: 16px;
+      background-color: #2a2a2a;
+      border-radius: 8px;
+    }
+
+    .exercise-selector {
+      width: 100%;
+      padding: 8px;
+      background-color: #3a3a3a;
+      color: white;
+      border: 1px solid #444;
+      border-radius: 4px;
+      font-size: 16px;
+      margin-top: 8px;
+    }
+
+    .exercise-selector:focus {
+      outline: none;
+      border-color: #3b82f6;
+    }
+
+    .stage-info {
+      margin-top: 8px;
+      font-size: 14px;
+      color: #aaa;
+    }
+
+    .global-settings {
+      width: 100%;
+      max-width: 640px;
+      margin: 20px auto;
+      background-color: #2a2a2a;
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .setting-control {
+      margin: 12px 0;
+    }
+
+    .setting-control label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #e0e0e0;
+    }
+
+    .setting-description {
+      font-size: 12px;
+      color: #aaa;
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .slider-container input[type="range"] {
+      flex: 1;
+      height: 6px;
+      -webkit-appearance: none;
+      background: #3a3a3a;
+      border-radius: 3px;
+      outline: none;
+    }
+
+    .slider-container input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      background: #3b82f6;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .slider-container input[type="range"]::-webkit-slider-thumb:hover {
+      background: #2563eb;
+    }
+
+    /* Add styles for debug panel */
+    .debug-panel {
+      width: 100%;
+      max-width: 640px;
+      margin: 20px auto;
+      background-color: #2a2a2a;
+      border-radius: 8px;
+      padding: 16px;
+      font-family: monospace;
+    }
+
+    .debug-content {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+    }
+
+    .debug-section {
+      background-color: #1a1a1a;
+      padding: 12px;
+      border-radius: 4px;
+    }
+
+    .debug-section h4 {
+      margin: 0 0 8px 0;
+      color: #3b82f6;
+      font-size: 14px;
+    }
+
+    .debug-section pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      color: #e0e0e0;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .condition-met {
+      color: #4ade80;
+    }
+
+    .condition-not-met {
+      color: #fb923c;
+    }
   </style>
 </head>
 <body>
@@ -541,58 +672,51 @@
       </div>
     </div>
     
+    <!-- Global Settings - Always Visible -->
+    <div class="global-settings">
+      <h3>Detection Settings</h3>
+      <div class="setting-control">
+        <label for="angle-tolerance">Detection Tolerance: <span id="angle-tolerance-value">10</span>°</label>
+        <div class="slider-container">
+          <input type="range" id="angle-tolerance" min="1" max="30" value="10" step="1">
+        </div>
+        <div class="setting-description">
+          Adjust how precisely angles need to match their targets. Higher values are more forgiving.
+        </div>
+      </div>
+    </div>
+
+    <!-- Debug Information Display -->
+    <div class="debug-panel">
+      <h3>Debug Information</h3>
+      <div class="debug-content">
+        <div class="debug-section">
+          <h4>Current State</h4>
+          <pre id="debug-current-state"></pre>
+        </div>
+        <div class="debug-section">
+          <h4>Transition Conditions</h4>
+          <pre id="debug-conditions"></pre>
+        </div>
+        <div class="debug-section">
+          <h4>Joint Angles</h4>
+          <pre id="debug-angles"></pre>
+        </div>
+      </div>
+    </div>
+
     <div class="joint-controls">
+      <div class="exercise-selection">
+        <h3>Select Exercise</h3>
+        <select id="exercise-selector" class="exercise-selector">
+          <option value="">Custom Exercise</option>
+        </select>
+        <div id="stage-info" class="stage-info"></div>
+      </div>
+
       <div class="joint-toggles">
         <h3>Select Joints to Track</h3>
         <div class="toggle-grid">
-          <!-- Left Elbow -->
-          <div>
-            <label class="toggle-label">
-              <input type="checkbox" data-joint="left-elbow" checked>
-              <span class="joint-name">Left Elbow</span>
-              <span class="color-dot" style="background-color: rgb(59, 130, 246);"></span>
-            </label>
-            
-            <div class="joint-setting" id="left-elbow-settings">
-              <div class="angle-controls">
-                <div class="slider-labels">
-                  <span>Begin: <span id="left-elbow-alpha-value">160</span>°</span>
-                  <span>End: <span id="left-elbow-omega-value">45</span>°</span>
-                </div>
-                <div class="dual-slider" id="left-elbow-slider">
-                  <div class="slider-track"></div>
-                  <div class="slider-range"></div>
-                  <div class="slider-handle alpha" data-value="160"></div>
-                  <div class="slider-handle omega" data-value="45"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Right Elbow -->
-          <div>
-            <label class="toggle-label">
-              <input type="checkbox" data-joint="right-elbow">
-              <span class="joint-name">Right Elbow</span>
-              <span class="color-dot" style="background-color: rgb(239, 68, 68);"></span>
-            </label>
-            
-            <div class="joint-setting" id="right-elbow-settings">
-              <div class="angle-controls">
-                <div class="slider-labels">
-                  <span>Begin: <span id="right-elbow-alpha-value">160</span>°</span>
-                  <span>End: <span id="right-elbow-omega-value">45</span>°</span>
-                </div>
-                <div class="dual-slider" id="right-elbow-slider">
-                  <div class="slider-track"></div>
-                  <div class="slider-range"></div>
-                  <div class="slider-handle alpha" data-value="160"></div>
-                  <div class="slider-handle omega" data-value="45"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
           <!-- Left Shoulder -->
           <div>
             <label class="toggle-label">
@@ -616,7 +740,7 @@
               </div>
             </div>
           </div>
-          
+
           <!-- Right Shoulder -->
           <div>
             <label class="toggle-label">
@@ -640,7 +764,103 @@
               </div>
             </div>
           </div>
-          
+
+          <!-- Left Elbow -->
+          <div>
+            <label class="toggle-label">
+              <input type="checkbox" data-joint="left-elbow" checked>
+              <span class="joint-name">Left Elbow</span>
+              <span class="color-dot" style="background-color: rgb(59, 130, 246);"></span>
+            </label>
+            
+            <div class="joint-setting" id="left-elbow-settings">
+              <div class="angle-controls">
+                <div class="slider-labels">
+                  <span>Begin: <span id="left-elbow-alpha-value">160</span>°</span>
+                  <span>End: <span id="left-elbow-omega-value">45</span>°</span>
+                </div>
+                <div class="dual-slider" id="left-elbow-slider">
+                  <div class="slider-track"></div>
+                  <div class="slider-range"></div>
+                  <div class="slider-handle alpha" data-value="160"></div>
+                  <div class="slider-handle omega" data-value="45"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Elbow -->
+          <div>
+            <label class="toggle-label">
+              <input type="checkbox" data-joint="right-elbow">
+              <span class="joint-name">Right Elbow</span>
+              <span class="color-dot" style="background-color: rgb(239, 68, 68);"></span>
+            </label>
+            
+            <div class="joint-setting" id="right-elbow-settings">
+              <div class="angle-controls">
+                <div class="slider-labels">
+                  <span>Begin: <span id="right-elbow-alpha-value">160</span>°</span>
+                  <span>End: <span id="right-elbow-omega-value">45</span>°</span>
+                </div>
+                <div class="dual-slider" id="right-elbow-slider">
+                  <div class="slider-track"></div>
+                  <div class="slider-range"></div>
+                  <div class="slider-handle alpha" data-value="160"></div>
+                  <div class="slider-handle omega" data-value="45"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Left Hip -->
+          <div>
+            <label class="toggle-label">
+              <input type="checkbox" data-joint="left-hip">
+              <span class="joint-name">Left Hip</span>
+              <span class="color-dot" style="background-color: rgb(168, 85, 247);"></span>
+            </label>
+            
+            <div class="joint-setting" id="left-hip-settings">
+              <div class="angle-controls">
+                <div class="slider-labels">
+                  <span>Begin: <span id="left-hip-alpha-value">180</span>°</span>
+                  <span>End: <span id="left-hip-omega-value">90</span>°</span>
+                </div>
+                <div class="dual-slider" id="left-hip-slider">
+                  <div class="slider-track"></div>
+                  <div class="slider-range"></div>
+                  <div class="slider-handle alpha" data-value="180"></div>
+                  <div class="slider-handle omega" data-value="90"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Hip -->
+          <div>
+            <label class="toggle-label">
+              <input type="checkbox" data-joint="right-hip">
+              <span class="joint-name">Right Hip</span>
+              <span class="color-dot" style="background-color: rgb(236, 72, 153);"></span>
+            </label>
+            
+            <div class="joint-setting" id="right-hip-settings">
+              <div class="angle-controls">
+                <div class="slider-labels">
+                  <span>Begin: <span id="right-hip-alpha-value">180</span>°</span>
+                  <span>End: <span id="right-hip-omega-value">90</span>°</span>
+                </div>
+                <div class="dual-slider" id="right-hip-slider">
+                  <div class="slider-track"></div>
+                  <div class="slider-range"></div>
+                  <div class="slider-handle alpha" data-value="180"></div>
+                  <div class="slider-handle omega" data-value="90"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Left Knee -->
           <div>
             <label class="toggle-label">
@@ -664,7 +884,7 @@
               </div>
             </div>
           </div>
-          
+
           <!-- Right Knee -->
           <div>
             <label class="toggle-label">
@@ -688,15 +908,7 @@
               </div>
             </div>
           </div>
-        </div>
-      </div>
-      
-      <div class="global-controls">
-        <div class="angle-control">
-          <label for="angle-tolerance">Detection Tolerance: <span id="angle-tolerance-value">10</span>°</label>
-          <div class="slider-container">
-            <input type="range" id="angle-tolerance" min="1" max="30" value="10" step="1">
-          </div>
+
         </div>
       </div>
     </div>
@@ -769,6 +981,38 @@
         smoothedAngle: 0,
         active: false
       },
+      'left-hip': {
+        alpha: 180,
+        omega: 90,
+        keypoints: {
+          start: 5,    // left shoulder
+          middle: 11,  // left hip
+          end: 13     // left knee
+        },
+        color: 'rgb(168, 85, 247)',
+        repCount: 0,
+        hasReachedOmega: false,
+        isReadyForNextRep: false,
+        currentAngle: 0,
+        smoothedAngle: 0,
+        active: false
+      },
+      'right-hip': {
+        alpha: 180,
+        omega: 90,
+        keypoints: {
+          start: 6,    // right shoulder
+          middle: 12,  // right hip
+          end: 14     // right knee
+        },
+        color: 'rgb(236, 72, 153)',
+        repCount: 0,
+        hasReachedOmega: false,
+        isReadyForNextRep: false,
+        currentAngle: 0,
+        smoothedAngle: 0,
+        active: false
+      },
       'left-knee': {
         alpha: 170,
         omega: 90,
@@ -802,6 +1046,229 @@
         active: false
       }
     };
+
+    // Exercise handling
+    let exercises = {};
+    let currentExercise = null;
+    let currentStage = 0;
+
+    // Load exercises from JSON file
+    async function loadExercises() {
+      try {
+        const response = await fetch('exercises.json');
+        exercises = await response.json();
+        populateExerciseSelector();
+      } catch (error) {
+        console.error('Error loading exercises:', error);
+      }
+    }
+
+    // Populate exercise selector dropdown
+    function populateExerciseSelector() {
+      const selector = document.getElementById('exercise-selector');
+      Object.keys(exercises).forEach(exerciseName => {
+        const option = document.createElement('option');
+        option.value = exerciseName;
+        option.textContent = exerciseName.split('_').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
+        selector.appendChild(option);
+      });
+    }
+
+    // Add debug update function
+    function updateDebugDisplay() {
+      const debugCurrentState = document.getElementById('debug-current-state');
+      const debugConditions = document.getElementById('debug-conditions');
+      const debugAngles = document.getElementById('debug-angles');
+
+      if (!currentExercise) {
+        debugCurrentState.textContent = "No exercise selected";
+        debugConditions.textContent = "N/A";
+        debugAngles.textContent = "N/A";
+        return;
+      }
+
+      const stageInfo = currentExercise[currentStage];
+      
+      // Update current state info
+      const stateInfo = {
+        'Exercise': document.getElementById('exercise-selector').value,
+        'Current Stage': currentStage,
+        'Stage Name': stageInfo.name,
+        'Tolerance': angleTolerance + '°'
+      };
+      debugCurrentState.textContent = JSON.stringify(stateInfo, null, 2);
+
+      // Check and display all conditions
+      const conditions = [];
+      const anglesList = [];
+      
+      for (const [joint, targetAngles] of Object.entries(stageInfo.movements)) {
+        const normalizedJoint = joint.replace('_', '-');
+        if (!jointConfig[normalizedJoint]?.active) continue;
+
+        const currentAngle = jointConfig[normalizedJoint].smoothedAngle || 0;
+        const startAngle = targetAngles.start;
+        const endAngle = targetAngles.end;
+        const diffFromStart = Math.abs(currentAngle - startAngle);
+        const diffFromEnd = Math.abs(currentAngle - endAngle);
+
+        // Add angle information
+        anglesList.push({
+          joint: normalizedJoint,
+          current: Math.round(currentAngle) + '°',
+          target: {
+            start: startAngle + '°',
+            end: endAngle + '°'
+          },
+          differences: {
+            fromStart: Math.round(diffFromStart) + '°',
+            fromEnd: Math.round(diffFromEnd) + '°'
+          }
+        });
+
+        // Add condition information
+        conditions.push({
+          description: `${normalizedJoint} at start position (${startAngle}° ±${angleTolerance}°)`,
+          met: diffFromStart <= angleTolerance,
+          current: Math.round(currentAngle) + '°',
+          diff: Math.round(diffFromStart) + '°'
+        });
+
+        conditions.push({
+          description: `${normalizedJoint} at end position (${endAngle}° ±${angleTolerance}°)`,
+          met: diffFromEnd <= angleTolerance,
+          current: Math.round(currentAngle) + '°',
+          diff: Math.round(diffFromEnd) + '°'
+        });
+      }
+
+      // Format conditions with colored status
+      const formattedConditions = conditions.map(c => 
+        `${c.met ? '✓' : '✗'} ${c.description}\n` +
+        `  Current: ${c.current}, Diff: ${c.diff}` +
+        `  ${c.met ? '(MET)' : '(NOT MET)'}`
+      ).join('\n\n');
+
+      debugConditions.textContent = formattedConditions || "Waiting for pose detection...";
+      debugAngles.textContent = JSON.stringify(anglesList, null, 2);
+    }
+
+    // Handle exercise stage updates
+    function handleExerciseStage(exercise, stage) {
+      const stageInfo = exercise[stage];
+      const movements = stageInfo.movements;
+      
+      console.log('Exercise Stage:', stageInfo.name);
+      console.log('Movements to configure:', movements);
+      
+      // Update stage info display
+      document.getElementById('stage-info').textContent = `Stage: ${stageInfo.name}`;
+      
+      // Update joint configurations
+      for (const [joint, angles] of Object.entries(movements)) {
+        const normalizedJoint = joint.replace('_', '-');
+        console.log('Configuring joint:', normalizedJoint, 'with angles:', angles);
+        
+        if (jointConfig[normalizedJoint]) {
+          // Enable the joint
+          const toggle = document.querySelector(`input[data-joint="${normalizedJoint}"]`);
+          console.log('Found toggle element:', toggle ? 'yes' : 'no');
+          
+          if (toggle) {
+            toggle.checked = true;
+            jointConfig[normalizedJoint].active = true;
+            console.log('Activated joint:', normalizedJoint);
+          } else {
+            console.warn('Toggle element not found for joint:', normalizedJoint);
+          }
+          
+          // Update angles
+          jointConfig[normalizedJoint].alpha = angles.start;
+          jointConfig[normalizedJoint].omega = angles.end;
+          
+          // Update UI
+          updateJointUI(normalizedJoint, angles);
+        } else {
+          console.warn('Joint not found in config:', normalizedJoint);
+        }
+      }
+      
+      // Update debug display
+      updateDebugDisplay();
+    }
+
+    // Handle exercise selection
+    function handleExerciseSelection(exerciseName) {
+      console.log('Selected exercise:', exerciseName);
+      
+      const jointTogglesSection = document.querySelector('.joint-toggles');
+      
+      // Reset rep counter and states
+      globalRepCount = 0;
+      updateRepCounter();
+      repState = {
+        allJointsReady: false,
+        allJointsCompleted: false,
+        lastRepTime: 0
+      };
+      
+      if (!exerciseName) {
+        console.log('Custom exercise mode selected');
+        // Custom Exercise selected
+        currentExercise = null;
+        currentStage = 0;
+        document.getElementById('stage-info').textContent = '';
+        
+        // Show joint toggles
+        jointTogglesSection.style.display = 'block';
+        
+        // Reset all joints to default state
+        Object.keys(jointConfig).forEach(joint => {
+          const toggle = document.querySelector(`input[data-joint="${joint}"]`);
+          if (toggle) {
+            toggle.disabled = false;  // Enable toggle controls
+          }
+        });
+
+        // Update debug display for custom mode
+        updateDebugDisplay();
+        return;
+      }
+      
+      const exercise = exercises[exerciseName];
+      if (!exercise) {
+        console.warn('Exercise not found:', exerciseName);
+        return;
+      }
+      
+      console.log('Loading exercise:', exerciseName, exercise);
+      currentExercise = exercise;
+      currentStage = 0;
+      
+      // Hide joint toggles for predefined exercises
+      jointTogglesSection.style.display = 'none';
+      
+      // Reset all joints first
+      Object.keys(jointConfig).forEach(joint => {
+        const toggle = document.querySelector(`input[data-joint="${joint}"]`);
+        if (toggle) {
+          toggle.checked = false;
+          jointConfig[joint].active = false;
+          toggle.disabled = true;  // Disable toggle controls
+        }
+      });
+      
+      console.log('All joints reset, configuring initial stage');
+      // Configure initial stage
+      handleExerciseStage(exercise, currentStage);
+    }
+
+    // Add exercise selector event listener
+    document.getElementById('exercise-selector').addEventListener('change', function(e) {
+      handleExerciseSelection(e.target.value);
+    });
 
     // DOM Elements
     const webcamEl = document.getElementById('webcam');
@@ -1097,9 +1564,7 @@
         if (angleDiff < 0) angleDiff += 2 * Math.PI;
         let isClockwise = angleDiff > Math.PI;
 
-        
-        
-        // Draw target range arc
+        // Draw background arc (full range)
         ctx.beginPath();
         ctx.arc(
           middlePoint.x, 
@@ -1109,13 +1574,46 @@
           omegaArcAngle, 
           isClockwise
         );
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)'; // White with some transparency
-        ctx.lineWidth = 6;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'; // Dimmer white for background
+        ctx.lineWidth = 8;
+        ctx.stroke();
+
+        // Calculate progress towards target
+        const currentAngle = config.smoothedAngle;
+        const targetAngle = config.omega;
+        const startAngle = config.alpha;
+        let progress = Math.abs(currentAngle - startAngle) / Math.abs(targetAngle - startAngle);
+        progress = Math.min(Math.max(progress, 0), 1); // Clamp between 0 and 1
+
+        // Draw progress arc
+        const progressArcEnd = alphaArcAngle + (omegaArcAngle - alphaArcAngle) * progress;
+        ctx.beginPath();
+        ctx.arc(
+          middlePoint.x, 
+          middlePoint.y, 
+          radius + 20, 
+          alphaArcAngle,
+          progressArcEnd,
+          isClockwise
+        );
+        
+        // Color based on how close to target
+        const distanceToTarget = Math.abs(currentAngle - targetAngle);
+        let arcColor;
+        if (distanceToTarget <= angleTolerance) {
+          arcColor = 'rgba(74, 222, 128, 0.8)'; // Green when within tolerance
+        } else if (distanceToTarget <= angleTolerance * 2) {
+          arcColor = 'rgba(251, 191, 36, 0.8)'; // Yellow when close
+        } else {
+          arcColor = 'rgba(59, 130, 246, 0.8)'; // Blue for normal progress
+        }
+        ctx.strokeStyle = arcColor;
+        ctx.lineWidth = 8;
         ctx.stroke();
         
-        // Draw skeleton lines with the joint's color - BOLDER LINES
+        // Draw skeleton lines with the joint's color
         ctx.strokeStyle = config.color;
-        ctx.lineWidth = 6; // Increased from 3 to 6 for bolder lines
+        ctx.lineWidth = 6;
         
         // First segment
         ctx.beginPath();
@@ -1129,35 +1627,40 @@
         ctx.lineTo(endPoint.x, endPoint.y);
         ctx.stroke();
         
-        // Draw joint keypoints - LARGER DOTS
+        // Draw joint keypoints
         ctx.fillStyle = config.color;
         
         // Start point
         ctx.beginPath();
-        ctx.arc(startPoint.x, startPoint.y, 8, 0, 2 * Math.PI); // Increased from 5 to 8
+        ctx.arc(startPoint.x, startPoint.y, 8, 0, 2 * Math.PI);
         ctx.fill();
         
         // Middle point (slightly larger)
         ctx.beginPath();
-        ctx.arc(middlePoint.x, middlePoint.y, 10, 0, 2 * Math.PI); // Increased from 6 to 10
+        ctx.arc(middlePoint.x, middlePoint.y, 10, 0, 2 * Math.PI);
         ctx.fill();
         
         // End point
         ctx.beginPath();
-        ctx.arc(endPoint.x, endPoint.y, 8, 0, 2 * Math.PI); // Increased from 5 to 8
+        ctx.arc(endPoint.x, endPoint.y, 8, 0, 2 * Math.PI);
         ctx.fill();
         
-        // Draw angle text near the joint if it's active - LARGER TEXT
+        // Draw angle text near the joint if it's active
         if (config.active) {
-          ctx.font = '48px Arial'; // Increased from 24px to 48px (2x larger)
+          ctx.font = '48px Arial';
           ctx.fillStyle = config.color;
           ctx.fillText(`${Math.round(config.smoothedAngle)}°`, middlePoint.x + 20, middlePoint.y - 20);
+          
+          // Draw target angle
+          ctx.font = '24px Arial';
+          ctx.fillStyle = arcColor;
+          ctx.fillText(`Target: ${config.omega}°`, middlePoint.x + 20, middlePoint.y + 20);
         }
         
-        return true; // Indicate successful visualization
+        return true;
       }
       
-      return false; // Indicate failed visualization
+      return false;
     }
     
     // Draw results on canvas
@@ -1240,6 +1743,9 @@
           }
         }
       }
+      
+      // Update debug display after processing angles and states
+      updateDebugDisplay();
     }
     
     // Add this function after the smoothAngle function
@@ -1313,6 +1819,11 @@
                   if (startPoint && middlePoint && endPoint && 
                       startPoint.score > 0.3 && middlePoint.score > 0.3 && endPoint.score > 0.3) {
                     validKeypointsCount++;
+                    
+                    // Calculate and update the angle for this joint
+                    const angle = calculateAngle(startPoint, middlePoint, endPoint);
+                    config.currentAngle = angle;
+                    config.smoothedAngle = smoothAngle(angle, config.smoothedAngle || angle, smoothingFactor);
                   }
                 }
               }
@@ -1320,6 +1831,9 @@
               if (validKeypointsCount > 0) {
                 validPoseDetected = true;
                 lastValidPoseTime = Date.now();
+                
+                // Process exercise state if we have a valid pose
+                processExerciseState();
               }
             }
           });
@@ -1329,6 +1843,8 @@
         if (validPoseDetected) {
           drawResults(ctx, poses, canvasEl.width, canvasEl.height);
           updateUI();
+          updateStateDisplay();
+          updateDebugDisplay();
         } else {
           // Check if we should show the message or keep the last pose
           const currentTime = Date.now();
@@ -1338,11 +1854,15 @@
             ctx.fillStyle = 'white';
             ctx.textAlign = 'center';
             ctx.fillText('Position your body clearly in view', canvasEl.width / 2, canvasEl.height / 2);
+            updateStateDisplay();
+            updateDebugDisplay();
           } else if (previousKeypoints) {
             // Create a fake pose with the previous keypoints to keep displaying
             const fakePose = { keypoints: previousKeypoints };
             drawResults(ctx, [fakePose], canvasEl.width, canvasEl.height);
             updateUI();
+            updateStateDisplay();
+            updateDebugDisplay();
           }
         }
         
@@ -1402,6 +1922,10 @@
           return;
         }
         
+        // Load exercises first
+        statusMessageEl.textContent = 'Loading exercises...';
+        await loadExercises();
+        
         // Show start button
         statusMessageEl.textContent = 'Ready to start. Click the button below.';
         startButtonEl.style.display = 'block';
@@ -1409,9 +1933,10 @@
         
         // Initialize rep counter
         updateRepCounter();
+
       } catch (error) {
-        console.error('Initialization error:', error);
-        statusMessageEl.textContent = 'Initialization error: ' + error.message;
+        console.error('Error initializing:', error);
+        statusMessageEl.textContent = 'Error initializing: ' + error.message;
       }
     }
     
@@ -1519,6 +2044,11 @@
 
     // Update the rep counting function to maintain state correctly
     function updateRepCount() {
+      // If we're using a predefined exercise, don't use the rep counter
+      if (currentExercise) {
+        return;
+      }
+
       // Get all active joints
       const activeJoints = Object.keys(jointConfig).filter(joint => jointConfig[joint].active);
       
@@ -1571,9 +2101,6 @@
         console.log("Reset for next rep");
       }
       
-      // Once we're in the ready state, we stay there until completion
-      // We'll only reset to waiting if explicitly required
-      
       // Update the state display
       updateStateDisplay();
     }
@@ -1601,52 +2128,416 @@
       // Remove all state classes
       stateElement.classList.remove('state-waiting', 'state-ready', 'state-completed');
       
-      // Set appropriate state message and class
-      if (!repState.allJointsReady && !repState.allJointsCompleted) {
-        stateElement.textContent = "Waiting for Begin";
-        stateElement.classList.add('state-waiting');
-      } 
-      else if (repState.allJointsReady && !repState.allJointsCompleted) {
-        stateElement.textContent = "Ready - Go to End";
-        stateElement.classList.add('state-ready');
-      }
-      else if (repState.allJointsCompleted) {
-        stateElement.textContent = "Completed - Return to Begin";
-        stateElement.classList.add('state-completed');
+      if (currentExercise) {
+        const stage = currentExercise[currentStage];
+        const stateText = exerciseState.currentState === ExerciseState.WAITING_FOR_START ? 
+          'Get to Start Position' : 'Move to End Position';
+        
+        stateElement.textContent = `${stage.name} - ${stateText}`;
+        stateElement.classList.add(
+          exerciseState.currentState === ExerciseState.WAITING_FOR_START ? 
+          'state-waiting' : 'state-ready'
+        );
+      } else {
+        // For custom exercise mode
+        if (!repState.allJointsReady && !repState.allJointsCompleted) {
+          stateElement.textContent = "Waiting for Begin";
+          stateElement.classList.add('state-waiting');
+        } 
+        else if (repState.allJointsReady && !repState.allJointsCompleted) {
+          stateElement.textContent = "Ready - Go to End";
+          stateElement.classList.add('state-ready');
+        }
+        else if (repState.allJointsCompleted) {
+          stateElement.textContent = "Completed - Return to Begin";
+          stateElement.classList.add('state-completed');
+        }
       }
     }
 
-    // Alternatively, if you can't directly edit the above function, find where angles are updated
-    // and add the rep counter call there
-
-    // Another approach: hook into the rendering loop
-    function hookIntoRenderLoop() {
-      const originalRenderFunction = window.requestAnimationFrame;
+    // Check if ready to start current stage
+    function isReadyForCurrentStage() {
+      if (!currentExercise || currentStage >= currentExercise.length) return false;
       
-      window.requestAnimationFrame = function(callback) {
-        return originalRenderFunction.call(window, function(timestamp) {
-          // Call the original callback
-          callback(timestamp);
+      const stageInfo = currentExercise[currentStage];
+      const movements = stageInfo.movements;
+      
+      // Check if all joint angles match starting angles within tolerance
+      for (const [joint, angles] of Object.entries(movements)) {
+        const normalizedJoint = joint.replace('_', '-');
+        if (!jointConfig[normalizedJoint]?.active) continue;
+        
+        const currentAngle = jointConfig[normalizedJoint].smoothedAngle;
+        const startAngle = angles.start;
+        
+        // Use isAngleCloseToTarget with the global tolerance
+        if (!isAngleCloseToTarget(currentAngle, startAngle, angleTolerance)) {
+          console.log(`Joint ${normalizedJoint} not ready: current=${currentAngle}, target=${startAngle}, diff=${Math.abs(currentAngle - startAngle)}`);
+          return false;
+        }
+      }
+      
+      return true;
+    }
+
+    // Check if current stage is complete
+    function isCurrentStageComplete(pose) {
+      if (!currentExercise || currentStage >= currentExercise.length) return false;
+      
+      const stageInfo = currentExercise[currentStage];
+      const movements = stageInfo.movements;
+      
+      // Check if all joint angles match target end angles within tolerance
+      for (const [joint, angles] of Object.entries(movements)) {
+        const normalizedJoint = joint.replace('_', '-');
+        if (!jointConfig[normalizedJoint]?.active) continue;
+        
+        const currentAngle = jointConfig[normalizedJoint].smoothedAngle;
+        const targetAngle = angles.end;
+        
+        // Use isAngleCloseToTarget with the global tolerance
+        if (!isAngleCloseToTarget(currentAngle, targetAngle, angleTolerance)) {
+          return false;
+        }
+      }
+      
+      // Add a debounce check to prevent rapid stage changes
+      const now = Date.now();
+      if (now - repState.lastRepTime < 500) { // Use the same debounce time as rep counting
+        return false;
+      }
+      repState.lastRepTime = now;
+      
+      return true;
+    }
+
+    // Progress to next exercise stage
+    function progressExerciseStage() {
+      if (!currentExercise) return;
+      
+      currentStage++;
+      if (currentStage >= currentExercise.length) {
+        // Exercise complete, increment rep counter
+        globalRepCount++;
+        updateRepCounter();
+        // Reset to beginning
+        currentStage = 0;
+      }
+      
+      handleExerciseStage(currentExercise, currentStage);
+    }
+
+    // Update the detectPose function to call our debug update
+    async function detectPose() {
+      try {
+        const poses = await detector.estimatePoses(webcamEl);
+        if (poses.length > 0) {
+          const pose = poses[0];
+          drawResults([pose], canvasEl.width, canvasEl.height);
           
-          // Then call our rep counter update
-          updateRepCount();
-        });
-      };
+          // Update debug display
+          updateDebugDisplay();
+          
+          // Update state display
+          updateStateDisplay();
+          
+          // Check if we should progress to next stage for predefined exercises
+          if (currentExercise && isCurrentStageComplete(pose)) {
+            progressExerciseStage();
+          }
+        }
+        requestAnimationFrame(detectPose);
+      } catch (error) {
+        console.error('Error in pose detection:', error);
+        requestAnimationFrame(detectPose);
+      }
     }
 
-    // Or, set up a separate loop for the rep counter
-    function startRepCounterLoop() {
-      setInterval(updateRepCount, 100); // Check rep state 10 times per second
-    }
-
-    // Add this to your initialization code
-    document.addEventListener('DOMContentLoaded', function() {
-      // ... existing initialization ...
+    // Update joint UI elements
+    function updateJointUI(joint, angles) {
+      // Update value displays
+      const alphaValue = document.getElementById(`${joint}-alpha-value`);
+      const omegaValue = document.getElementById(`${joint}-omega-value`);
+      if (alphaValue) alphaValue.textContent = angles.start;
+      if (omegaValue) omegaValue.textContent = angles.end;
       
-      // Choose one of these methods to ensure updateRepCount is called:
-      // hookIntoRenderLoop();
-      startRepCounterLoop();
-    });
+      // Update slider handles
+      const alphaHandle = document.querySelector(`#${joint}-slider .slider-handle.alpha`);
+      const omegaHandle = document.querySelector(`#${joint}-slider .slider-handle.omega`);
+      if (alphaHandle) {
+        alphaHandle.style.left = `${(angles.start / 180) * 100}%`;
+        alphaHandle.dataset.value = angles.start;
+      }
+      if (omegaHandle) {
+        omegaHandle.style.left = `${(angles.end / 180) * 100}%`;
+        omegaHandle.dataset.value = angles.end;
+      }
+      
+      // Update range bar
+      const range = document.querySelector(`#${joint}-slider .slider-range`);
+      if (range) {
+        const left = Math.min(angles.start, angles.end) / 180 * 100;
+        const right = Math.max(angles.start, angles.end) / 180 * 100;
+        range.style.left = `${left}%`;
+        range.style.width = `${right - left}%`;
+      }
+    }
+
+    // Add state machine constants
+    const ExerciseState = {
+      WAITING_FOR_START: 'waiting_for_start',
+      READY_FOR_END: 'ready_for_end'
+    };
+
+    // Add state machine to exercise state tracking
+    let exerciseState = {
+      currentState: ExerciseState.WAITING_FOR_START,
+      lastStateChangeTime: 0
+    };
+
+    // Check if all active joints are at their start positions
+    function checkStartPositions() {
+      for (const [joint, targetAngles] of Object.entries(currentExercise[currentStage].movements)) {
+        const normalizedJoint = joint.replace('_', '-');
+        if (!jointConfig[normalizedJoint]?.active) continue;
+
+        const currentAngle = jointConfig[normalizedJoint].smoothedAngle || 0;
+        const startAngle = targetAngles.start;
+        const diffFromStart = Math.abs(currentAngle - startAngle);
+
+        if (diffFromStart > angleTolerance) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    // Check if all active joints are at their end positions
+    function checkEndPositions() {
+      for (const [joint, targetAngles] of Object.entries(currentExercise[currentStage].movements)) {
+        const normalizedJoint = joint.replace('_', '-');
+        if (!jointConfig[normalizedJoint]?.active) continue;
+
+        const currentAngle = jointConfig[normalizedJoint].smoothedAngle || 0;
+        const endAngle = targetAngles.end;
+        const diffFromEnd = Math.abs(currentAngle - endAngle);
+
+        if (diffFromEnd > angleTolerance) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    // Update state display
+    function updateStateDisplay() {
+      const stateElement = document.getElementById('state-status');
+      
+      if (!stateElement) return;
+      
+      // Remove all state classes
+      stateElement.classList.remove('state-waiting', 'state-ready', 'state-completed');
+      
+      if (currentExercise) {
+        const stage = currentExercise[currentStage];
+        
+        switch (exerciseState.currentState) {
+          case ExerciseState.WAITING_FOR_START:
+            stateElement.textContent = `Get Ready - ${stage.name}`;
+            stateElement.classList.add('state-waiting');
+            break;
+          case ExerciseState.READY_FOR_END:
+            stateElement.textContent = `Move to End - ${stage.name}`;
+            stateElement.classList.add('state-ready');
+            break;
+        }
+      } else {
+        // For custom exercise mode
+        if (!repState.allJointsReady && !repState.allJointsCompleted) {
+          stateElement.textContent = "Waiting for Begin";
+          stateElement.classList.add('state-waiting');
+        } 
+        else if (repState.allJointsReady && !repState.allJointsCompleted) {
+          stateElement.textContent = "Ready - Go to End";
+          stateElement.classList.add('state-ready');
+        }
+        else if (repState.allJointsCompleted) {
+          stateElement.textContent = "Completed - Return to Begin";
+          stateElement.classList.add('state-completed');
+        }
+      }
+    }
+
+    // Update the debug display to show current state
+    function updateDebugDisplay() {
+      const debugCurrentState = document.getElementById('debug-current-state');
+      const debugConditions = document.getElementById('debug-conditions');
+      const debugAngles = document.getElementById('debug-angles');
+
+      if (!currentExercise) {
+        debugCurrentState.textContent = "No exercise selected";
+        debugConditions.textContent = "N/A";
+        debugAngles.textContent = "N/A";
+        return;
+      }
+
+      const stageInfo = currentExercise[currentStage];
+      
+      // Update current state info
+      const stateInfo = {
+        'Exercise': document.getElementById('exercise-selector').value,
+        'Current Stage': currentStage,
+        'Stage Name': stageInfo.name,
+        'Current State': exerciseState.currentState,
+        'Tolerance': angleTolerance + '°'
+      };
+      debugCurrentState.textContent = JSON.stringify(stateInfo, null, 2);
+
+      // Check and display all conditions
+      const conditions = [];
+      const anglesList = [];
+      
+      for (const [joint, targetAngles] of Object.entries(stageInfo.movements)) {
+        const normalizedJoint = joint.replace('_', '-');
+        if (!jointConfig[normalizedJoint]?.active) continue;
+
+        const currentAngle = jointConfig[normalizedJoint].smoothedAngle || 0;
+        const startAngle = targetAngles.start;
+        const endAngle = targetAngles.end;
+        const diffFromStart = Math.abs(currentAngle - startAngle);
+        const diffFromEnd = Math.abs(currentAngle - endAngle);
+
+        // Add angle information
+        anglesList.push({
+          joint: normalizedJoint,
+          current: Math.round(currentAngle) + '°',
+          target: {
+            start: startAngle + '°',
+            end: endAngle + '°'
+          },
+          differences: {
+            fromStart: Math.round(diffFromStart) + '°',
+            fromEnd: Math.round(diffFromEnd) + '°'
+          }
+        });
+
+        // Add condition information based on current state
+        if (exerciseState.currentState === ExerciseState.WAITING_FOR_START) {
+          conditions.push({
+            description: `${normalizedJoint} at start position (${startAngle}° ±${angleTolerance}°)`,
+            met: diffFromStart <= angleTolerance,
+            current: Math.round(currentAngle) + '°',
+            diff: Math.round(diffFromStart) + '°'
+          });
+        } else {
+          conditions.push({
+            description: `${normalizedJoint} at end position (${endAngle}° ±${angleTolerance}°)`,
+            met: diffFromEnd <= angleTolerance,
+            current: Math.round(currentAngle) + '°',
+            diff: Math.round(diffFromEnd) + '°'
+          });
+        }
+      }
+
+      // Format conditions with colored status
+      const formattedConditions = conditions.map(c => 
+        `${c.met ? '✓' : '✗'} ${c.description}\n` +
+        `  Current: ${c.current}, Diff: ${c.diff}` +
+        `  ${c.met ? '(MET)' : '(NOT MET)'}`
+      ).join('\n\n');
+
+      debugConditions.textContent = formattedConditions || "Waiting for pose detection...";
+      debugAngles.textContent = JSON.stringify(anglesList, null, 2);
+    }
+
+    // Update the exercise stage handling to initialize state
+    function handleExerciseStage(exercise, stage) {
+      const stageInfo = exercise[stage];
+      const movements = stageInfo.movements;
+      
+      console.log('Exercise Stage:', stageInfo.name);
+      console.log('Movements to configure:', movements);
+      
+      // Reset state machine
+      exerciseState.currentState = ExerciseState.WAITING_FOR_START;
+      exerciseState.lastStateChangeTime = Date.now();
+      
+      // Update stage info display
+      document.getElementById('stage-info').textContent = `Stage: ${stageInfo.name}`;
+      
+      // Update joint configurations
+      for (const [joint, angles] of Object.entries(movements)) {
+        const normalizedJoint = joint.replace('_', '-');
+        console.log('Configuring joint:', normalizedJoint, 'with angles:', angles);
+        
+        if (jointConfig[normalizedJoint]) {
+          // Enable the joint
+          const toggle = document.querySelector(`input[data-joint="${normalizedJoint}"]`);
+          console.log('Found toggle element:', toggle ? 'yes' : 'no');
+          
+          if (toggle) {
+            toggle.checked = true;
+            jointConfig[normalizedJoint].active = true;
+            console.log('Activated joint:', normalizedJoint);
+          } else {
+            console.warn('Toggle element not found for joint:', normalizedJoint);
+          }
+          
+          // Update angles
+          jointConfig[normalizedJoint].alpha = angles.start;
+          jointConfig[normalizedJoint].omega = angles.end;
+          
+          // Update UI
+          updateJointUI(normalizedJoint, angles);
+        } else {
+          console.warn('Joint not found in config:', normalizedJoint);
+        }
+      }
+      
+      // Update debug display
+      updateDebugDisplay();
+    }
+
+    // Update the main detection loop to handle state transitions
+    function processExerciseState() {
+      if (!currentExercise) return;
+
+      const now = Date.now();
+      const timeSinceLastChange = now - exerciseState.lastStateChangeTime;
+      
+      switch (exerciseState.currentState) {
+        case ExerciseState.WAITING_FOR_START:
+          if (checkStartPositions() && timeSinceLastChange > 500) {
+            exerciseState.currentState = ExerciseState.READY_FOR_END;
+            exerciseState.lastStateChangeTime = now;
+            console.log('Transitioned to READY_FOR_END state');
+            updateStateDisplay();
+          }
+          break;
+          
+        case ExerciseState.READY_FOR_END:
+          if (checkEndPositions() && timeSinceLastChange > 500) {
+            // Check if this was the last stage of the exercise
+            if (currentStage === currentExercise.length - 1) {
+              // Only increment rep count when completing the full exercise
+              globalRepCount++;
+              updateRepCounter();
+            }
+            
+            // Move to next stage or reset to first stage
+            currentStage++;
+            if (currentStage >= currentExercise.length) {
+              currentStage = 0;
+            }
+            
+            // Configure the new stage
+            handleExerciseStage(currentExercise, currentStage);
+            console.log('Completed stage, moved to next stage');
+            updateStateDisplay();
+          }
+          break;
+      }
+    }
   </script>
 </body>
 </html>

@@ -1,0 +1,75 @@
+{
+  "supine_straight_leg_raise": [
+    {
+      "name": "Raise Leg",
+      "movements": {
+        "right-hip": {"start": 180, "end": 90}
+      }
+    },
+    {
+      "name": "Lower Leg",
+      "movements": {
+        "right-hip": {"start": 90, "end": 180}
+      }
+    }
+  ],
+  "wall_squat": [
+    {
+      "name": "Squat Down",
+      "movements": {
+        "left-hip": {"start": 180, "end": 90},
+        "right-hip": {"start": 180, "end": 90},
+        "left-knee": {"start": 180, "end": 90},
+        "right-knee": {"start": 180, "end": 90}
+      }
+    },
+    {
+      "name": "Hold Position",
+      "movements": {
+        "left-hip": {"start": 90, "end": 90},
+        "right-hip": {"start": 90, "end": 90},
+        "left-knee": {"start": 90, "end": 90},
+        "right-knee": {"start": 90, "end": 90}
+      }
+    },
+    {
+      "name": "Return to Standing",
+      "movements": {
+        "left-hip": {"start": 90, "end": 180},
+        "right-hip": {"start": 90, "end": 180},
+        "left-knee": {"start": 90, "end": 180},
+        "right-knee": {"start": 90, "end": 180}
+      }
+    }
+  ],
+  "step_up_down_10cm": [
+    {
+      "name": "Right Leg Step Up",
+      "movements": {
+        "right-hip": {"start": 180, "end": 135},
+        "right-knee": {"start": 180, "end": 120}
+      }
+    },
+    {
+      "name": "Right Leg Lower",
+      "movements": {
+        "right-hip": {"start": 135, "end": 180},
+        "right-knee": {"start": 120, "end": 180}
+      }
+    },
+    {
+      "name": "Left Leg Step Up",
+      "movements": {
+        "left-hip": {"start": 180, "end": 160},
+        "left-knee": {"start": 180, "end": 150}
+      }
+    },
+    {
+      "name": "Left Leg Lower",
+      "movements": {
+        "left-hip": {"start": 160, "end": 180},
+        "left-knee": {"start": 150, "end": 180}
+      }
+    }
+  ]
+} 
