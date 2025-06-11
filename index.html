@@ -676,9 +676,9 @@
     <div class="global-settings">
       <h3>Detection Settings</h3>
       <div class="setting-control">
-        <label for="angle-tolerance">Detection Tolerance: <span id="angle-tolerance-value">10</span>°</label>
+        <label for="angle-tolerance">Detection Tolerance: <span id="angle-tolerance-value">25</span>°</label>
         <div class="slider-container">
-          <input type="range" id="angle-tolerance" min="1" max="30" value="10" step="1">
+          <input type="range" id="angle-tolerance" min="1" max="45" value="25" step="1">
         </div>
         <div class="setting-description">
           Adjust how precisely angles need to match their targets. Higher values are more forgiving.
@@ -915,72 +915,8 @@
   </div>
 
   <script>
-    // Joint Configuration Data Structure
+    // Add joint lock state to each joint config
     const jointConfig = {
-      'left-elbow': {
-        alpha: 160,
-        omega: 45,
-        keypoints: {
-          start: 5,
-          middle: 7,
-          end: 9
-        },
-        color: 'rgb(59, 130, 246)',
-        repCount: 0,
-        hasReachedOmega: false,
-        isReadyForNextRep: false,
-        currentAngle: 0,
-        smoothedAngle: 0,
-        active: true
-      },
-      'right-elbow': {
-        alpha: 160,
-        omega: 45,
-        keypoints: {
-          start: 6,
-          middle: 8,
-          end: 10
-        },
-        color: 'rgb(239, 68, 68)',
-        repCount: 0,
-        hasReachedOmega: false,
-        isReadyForNextRep: false,
-        currentAngle: 0,
-        smoothedAngle: 0,
-        active: false
-      },
-      'left-shoulder': {
-        alpha: 90,
-        omega: 180,
-        keypoints: {
-          start: 11,
-          middle: 5,
-          end: 7
-        },
-        color: 'rgb(16, 185, 129)',
-        repCount: 0,
-        hasReachedOmega: false,
-        isReadyForNextRep: false,
-        currentAngle: 0,
-        smoothedAngle: 0,
-        active: false
-      },
-      'right-shoulder': {
-        alpha: 90,
-        omega: 180,
-        keypoints: {
-          start: 12,
-          middle: 6,
-          end: 8
-        },
-        color: 'rgb(249, 115, 22)',
-        repCount: 0,
-        hasReachedOmega: false,
-        isReadyForNextRep: false,
-        currentAngle: 0,
-        smoothedAngle: 0,
-        active: false
-      },
       'left-hip': {
         alpha: 180,
         omega: 90,
@@ -995,7 +931,15 @@
         isReadyForNextRep: false,
         currentAngle: 0,
         smoothedAngle: 0,
-        active: false
+        active: false,
+        // Add lock state
+        lockState: {
+          isLocked: false,
+          startTime: 0,
+          targetAngle: null
+        },
+        angleHistory: [],
+        lastUpdateTime: 0
       },
       'right-hip': {
         alpha: 180,
@@ -1011,7 +955,15 @@
         isReadyForNextRep: false,
         currentAngle: 0,
         smoothedAngle: 0,
-        active: false
+        active: false,
+        // Add lock state
+        lockState: {
+          isLocked: false,
+          startTime: 0,
+          targetAngle: null
+        },
+        angleHistory: [],
+        lastUpdateTime: 0
       },
       'left-knee': {
         alpha: 170,
@@ -1021,13 +973,21 @@
           middle: 13,
           end: 15
         },
-        color: 'rgb(139, 92, 246)',
+        color: 'rgb(168, 85, 247)',
         repCount: 0,
         hasReachedOmega: false,
         isReadyForNextRep: false,
         currentAngle: 0,
         smoothedAngle: 0,
-        active: false
+        active: false,
+        // Add lock state
+        lockState: {
+          isLocked: false,
+          startTime: 0,
+          targetAngle: null
+        },
+        angleHistory: [],
+        lastUpdateTime: 0
       },
       'right-knee': {
         alpha: 170,
@@ -1043,9 +1003,75 @@
         isReadyForNextRep: false,
         currentAngle: 0,
         smoothedAngle: 0,
-        active: false
+        active: false,
+        // Add lock state
+        lockState: {
+          isLocked: false,
+          startTime: 0,
+          targetAngle: null
+        },
+        angleHistory: [],
+        lastUpdateTime: 0
       }
     };
+
+    // Add lock-in mechanism functions
+    function checkJointLock(joint, config, currentAngle) {
+      const now = performance.now();
+      const lockTimeout = 5000; // 5 second lock timeout
+      const maxDeviation = 5;  // 5 degrees max deviation
+      
+      // Check if we're at a target position
+      const atAlpha = Math.abs(currentAngle - config.alpha) <= angleTolerance;
+      const atOmega = Math.abs(currentAngle - config.omega) <= angleTolerance;
+      
+      if (!config.lockState.isLocked) {
+        // Start lock if at either target position
+        if (atAlpha || atOmega) {
+          config.lockState.isLocked = true;
+          config.lockState.startTime = now;
+          config.lockState.targetAngle = atAlpha ? config.alpha : config.omega;
+        }
+      } else {
+        // Check if we're still within tolerance
+        const deviation = Math.abs(currentAngle - config.lockState.targetAngle);
+        if (deviation > maxDeviation) {
+          // Reset lock if deviated too far
+          config.lockState.isLocked = false;
+          config.lockState.startTime = 0;
+          config.lockState.targetAngle = null;
+          return false;
+        }
+        
+        // Check if we've maintained position long enough
+        if (now - config.lockState.startTime >= lockTimeout) {
+          return true;
+        }
+      }
+      
+      return false;
+    }
+
+    // Check if all active joints are ready for state transition
+    function checkJointsForTransition() {
+      let allJointsReady = true;
+      
+      for (const joint in jointConfig) {
+        const config = jointConfig[joint];
+        if (!config.active) continue;
+        
+        const angle = config.smoothedAngle;
+        const atTarget = Math.abs(angle - config.omega) <= angleTolerance;
+        
+        // Joint must either be locked or at target position
+        if (!config.lockState.isLocked && !atTarget) {
+          allJointsReady = false;
+          break;
+        }
+      }
+      
+      return allJointsReady;
+    }
 
     // Exercise handling
     let exercises = {};
@@ -1281,7 +1307,7 @@
     const jointAngleDisplaysEl = document.querySelector('.joint-angle-displays');
     
     // Add variable for tolerance
-    let angleTolerance = 10;
+    let angleTolerance = 25;
     
     // Add the tolerance control elements
     const angleToleranceSlider = document.getElementById('angle-tolerance');
@@ -1663,13 +1689,49 @@
       return false;
     }
     
-    // Draw results on canvas
+    // Add rolling average functions
+    function updateRollingAverage(joint, config, currentAngle) {
+      const now = performance.now();
+      const HISTORY_WINDOW = 5000; // 5 second window
+      
+      // Add new measurement with timestamp
+      config.angleHistory.push({
+        angle: currentAngle,
+        timestamp: now
+      });
+      
+      // Remove measurements older than window
+      config.angleHistory = config.angleHistory.filter(
+        entry => (now - entry.timestamp) <= HISTORY_WINDOW
+      );
+      
+      // Calculate weighted average
+      if (config.angleHistory.length > 0) {
+        let totalWeight = 0;
+        let weightedSum = 0;
+        
+        config.angleHistory.forEach(entry => {
+          // More recent entries get higher weight
+          const age = now - entry.timestamp;
+          const weight = 1 - (age / HISTORY_WINDOW);
+          
+          weightedSum += entry.angle * weight;
+          totalWeight += weight;
+        });
+        
+        config.smoothedAngle = weightedSum / totalWeight;
+      } else {
+        config.smoothedAngle = currentAngle;
+      }
+    }
+    
+    // Update the drawResults function to use rolling average
     function drawResults(ctx, poses, canvasWidth, canvasHeight) {
       // Clear the canvas
       ctx.clearRect(0, 0, canvasWidth, canvasHeight);
       
       if (!poses || poses.length === 0) {
-        return; // Return early without drawing - message handling is now in detectAndRender
+        return;
       }
       
       // Get the first detected pose
@@ -1691,14 +1753,14 @@
           if (startPoint && middlePoint && endPoint && 
               startPoint.score > 0.3 && middlePoint.score > 0.3 && endPoint.score > 0.3) {
             
-            // Calculate the angle
+            // Calculate the raw angle
             const angle = calculateAngle(startPoint, middlePoint, endPoint);
             
             // Store the raw angle
             config.currentAngle = angle;
             
-            // Apply smoothing
-            config.smoothedAngle = smoothAngle(angle, config.smoothedAngle, smoothingFactor);
+            // Update rolling average
+            updateRollingAverage(joint, config, angle);
             
             // Draw the visualization
             if (drawAngleVisualization(ctx, joint, keypoints)) {
@@ -1706,11 +1768,6 @@
             }
           }
         }
-      }
-      
-      // If no joint was successfully visualized, show a message
-      if (successfulVisualizations === 0) {
-        return; // Return early without drawing - message handling is now in detectAndRender
       }
     }
     
@@ -1723,23 +1780,36 @@
       for (const joint in jointConfig) {
         if (jointConfig[joint].active) {
           const config = jointConfig[joint];
-          const angle = config.smoothedAngle; // Use smoothed angle instead of raw angle
+          const angle = config.smoothedAngle;
           
-          const isAtAlpha = isAngleCloseToTarget(angle, config.alpha, angleTolerance);
-          const isAtOmega = isAngleCloseToTarget(angle, config.omega, angleTolerance);
-          
-          // If we're at omega and haven't counted this rep yet, and we're ready for next rep
-          if (isAtOmega && !config.hasReachedOmega && config.isReadyForNextRep) {
-            config.hasReachedOmega = true;
-            config.repCount++;
-            updateRepCounter();
-            config.isReadyForNextRep = false; // Now we need to go back to alpha
-          }
-          
-          // If we're back at alpha after reaching omega, we're ready for the next rep
-          if (isAtAlpha && config.hasReachedOmega && !config.isReadyForNextRep) {
-            config.hasReachedOmega = false; // Reset for next rep
-            config.isReadyForNextRep = true;
+          // Check joint lock
+          checkJointLock(joint, config, angle);
+        }
+      }
+      
+      // Check if all joints are ready for transition
+      if (checkJointsForTransition()) {
+        // Process each joint for rep counting
+        for (const joint in jointConfig) {
+          if (jointConfig[joint].active) {
+            const config = jointConfig[joint];
+            const angle = config.smoothedAngle;
+            const isAtOmega = isAngleCloseToTarget(angle, config.omega, angleTolerance);
+            
+            // If we're at omega and haven't counted this rep yet, and we're ready for next rep
+            if (isAtOmega && !config.hasReachedOmega && config.isReadyForNextRep) {
+              config.hasReachedOmega = true;
+              config.repCount++;
+              updateRepCounter();
+              config.isReadyForNextRep = false; // Now we need to go back to alpha
+            }
+            
+            // If we're back at alpha after reaching omega, we're ready for the next rep
+            const isAtAlpha = isAngleCloseToTarget(angle, config.alpha, angleTolerance);
+            if (isAtAlpha && config.hasReachedOmega && !config.isReadyForNextRep) {
+              config.hasReachedOmega = false; // Reset for next rep
+              config.isReadyForNextRep = true;
+            }
           }
         }
       }
