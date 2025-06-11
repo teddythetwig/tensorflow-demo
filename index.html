@@ -2412,7 +2412,23 @@
 
     // Check if all active joints are at their start positions
     function checkStartPositions() {
-      for (const [joint, targetAngles] of Object.entries(currentExercise[currentStage].movements)) {
+      if (!currentExercise || !currentExercise[currentStage]) return false;
+      
+      const stageInfo = currentExercise[currentStage];
+      // Get movements from either movements property or hold.joints for hold stages
+      const movements = stageInfo.type === 'hold' 
+        ? Object.entries(stageInfo.hold.joints).reduce((acc, [joint, config]) => {
+            acc[joint] = { start: config.angle, end: config.angle };
+            return acc;
+          }, {})
+        : stageInfo.movements;
+
+      if (!movements) {
+        console.error('No movements defined for stage:', stageInfo.name);
+        return false;
+      }
+
+      for (const [joint, targetAngles] of Object.entries(movements)) {
         const normalizedJoint = joint.replace('_', '-');
         if (!jointConfig[normalizedJoint]?.active) continue;
 
@@ -2429,7 +2445,23 @@
 
     // Check if all active joints are at their end positions
     function checkEndPositions() {
-      for (const [joint, targetAngles] of Object.entries(currentExercise[currentStage].movements)) {
+      if (!currentExercise || !currentExercise[currentStage]) return false;
+      
+      const stageInfo = currentExercise[currentStage];
+      // Get movements from either movements property or hold.joints for hold stages
+      const movements = stageInfo.type === 'hold' 
+        ? Object.entries(stageInfo.hold.joints).reduce((acc, [joint, config]) => {
+            acc[joint] = { start: config.angle, end: config.angle };
+            return acc;
+          }, {})
+        : stageInfo.movements;
+
+      if (!movements) {
+        console.error('No movements defined for stage:', stageInfo.name);
+        return false;
+      }
+
+      for (const [joint, targetAngles] of Object.entries(movements)) {
         const normalizedJoint = joint.replace('_', '-');
         if (!jointConfig[normalizedJoint]?.active) continue;
 
