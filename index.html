@@ -1122,21 +1122,43 @@
       }
 
       const stageInfo = currentExercise[currentStage];
+      if (!stageInfo) {
+        debugCurrentState.textContent = "Invalid stage";
+        debugConditions.textContent = "N/A";
+        debugAngles.textContent = "N/A";
+        return;
+      }
       
       // Update current state info
       const stateInfo = {
         'Exercise': document.getElementById('exercise-selector').value,
         'Current Stage': currentStage,
         'Stage Name': stageInfo.name,
+        'Stage Type': stageInfo.type,
+        'Current State': exerciseState.currentState,
         'Tolerance': angleTolerance + '°'
       };
       debugCurrentState.textContent = JSON.stringify(stateInfo, null, 2);
+
+      // Get movements from either movements property or hold.joints for hold stages
+      const movements = stageInfo.type === 'hold' 
+        ? Object.entries(stageInfo.hold.joints).reduce((acc, [joint, config]) => {
+            acc[joint] = { start: config.angle, end: config.angle };
+            return acc;
+          }, {})
+        : stageInfo.movements;
+
+      if (!movements) {
+        debugConditions.textContent = "No movements defined for stage";
+        debugAngles.textContent = "N/A";
+        return;
+      }
 
       // Check and display all conditions
       const conditions = [];
       const anglesList = [];
       
-      for (const [joint, targetAngles] of Object.entries(stageInfo.movements)) {
+      for (const [joint, targetAngles] of Object.entries(movements)) {
         const normalizedJoint = joint.replace('_', '-');
         if (!jointConfig[normalizedJoint]?.active) continue;
 
@@ -1160,20 +1182,32 @@
           }
         });
 
-        // Add condition information
-        conditions.push({
-          description: `${normalizedJoint} at start position (${startAngle}° ±${angleTolerance}°)`,
-          met: diffFromStart <= angleTolerance,
-          current: Math.round(currentAngle) + '°',
-          diff: Math.round(diffFromStart) + '°'
-        });
-
-        conditions.push({
-          description: `${normalizedJoint} at end position (${endAngle}° ±${angleTolerance}°)`,
-          met: diffFromEnd <= angleTolerance,
-          current: Math.round(currentAngle) + '°',
-          diff: Math.round(diffFromEnd) + '°'
-        });
+        // Add condition information based on current state and stage type
+        if (stageInfo.type === 'hold') {
+          conditions.push({
+            description: `${normalizedJoint} at hold angle (${startAngle}° ±${angleTolerance}°)`,
+            met: diffFromStart <= angleTolerance,
+            current: Math.round(currentAngle) + '°',
+            diff: Math.round(diffFromStart) + '°'
+          });
+        } else {
+          // For movement stages, show condition based on current state
+          if (exerciseState.currentState === ExerciseState.WAITING_FOR_START) {
+            conditions.push({
+              description: `${normalizedJoint} at start position (${startAngle}° ±${angleTolerance}°)`,
+              met: diffFromStart <= angleTolerance,
+              current: Math.round(currentAngle) + '°',
+              diff: Math.round(diffFromStart) + '°'
+            });
+          } else {
+            conditions.push({
+              description: `${normalizedJoint} at end position (${endAngle}° ±${angleTolerance}°)`,
+              met: diffFromEnd <= angleTolerance,
+              current: Math.round(currentAngle) + '°',
+              diff: Math.round(diffFromEnd) + '°'
+            });
+          }
+        }
       }
 
       // Format conditions with colored status
@@ -1190,10 +1224,30 @@
     // Handle exercise stage updates
     function handleExerciseStage(exercise, stage) {
       const stageInfo = exercise[stage];
-      const movements = stageInfo.movements;
+      if (!stageInfo) {
+        console.error('Invalid stage:', stage);
+        return;
+      }
+
+      // Get movements from either movements property or hold.joints for hold stages
+      const movements = stageInfo.type === 'hold' 
+        ? Object.entries(stageInfo.hold.joints).reduce((acc, [joint, config]) => {
+            acc[joint] = { start: config.angle, end: config.angle };
+            return acc;
+          }, {})
+        : stageInfo.movements;
+
+      if (!movements) {
+        console.error('No movements defined for stage:', stageInfo.name);
+        return;
+      }
       
       console.log('Exercise Stage:', stageInfo.name);
       console.log('Movements to configure:', movements);
+      
+      // Reset state machine
+      exerciseState.currentState = ExerciseState.WAITING_FOR_START;
+      exerciseState.lastStateChangeTime = Date.now();
       
       // Update stage info display
       document.getElementById('stage-info').textContent = `Stage: ${stageInfo.name}`;
@@ -2189,7 +2243,23 @@
       if (!currentExercise || currentStage >= currentExercise.length) return false;
       
       const stageInfo = currentExercise[currentStage];
-      const movements = stageInfo.movements;
+      if (!stageInfo) {
+        console.error('Invalid stage:', currentStage);
+        return false;
+      }
+
+      // Get movements from either movements property or hold.joints for hold stages
+      const movements = stageInfo.type === 'hold' 
+        ? Object.entries(stageInfo.hold.joints).reduce((acc, [joint, config]) => {
+            acc[joint] = { start: config.angle, end: config.angle };
+            return acc;
+          }, {})
+        : stageInfo.movements;
+
+      if (!movements) {
+        console.error('No movements defined for stage:', stageInfo.name);
+        return false;
+      }
       
       // Check if all joint angles match starting angles within tolerance
       for (const [joint, angles] of Object.entries(movements)) {
@@ -2214,7 +2284,23 @@
       if (!currentExercise || currentStage >= currentExercise.length) return false;
       
       const stageInfo = currentExercise[currentStage];
-      const movements = stageInfo.movements;
+      if (!stageInfo) {
+        console.error('Invalid stage:', currentStage);
+        return false;
+      }
+
+      // Get movements from either movements property or hold.joints for hold stages
+      const movements = stageInfo.type === 'hold' 
+        ? Object.entries(stageInfo.hold.joints).reduce((acc, [joint, config]) => {
+            acc[joint] = { start: config.angle, end: config.angle };
+            return acc;
+          }, {})
+        : stageInfo.movements;
+
+      if (!movements) {
+        console.error('No movements defined for stage:', stageInfo.name);
+        return false;
+      }
       
       // Check if all joint angles match target end angles within tolerance
       for (const [joint, angles] of Object.entries(movements)) {
@@ -2411,22 +2497,43 @@
       }
 
       const stageInfo = currentExercise[currentStage];
+      if (!stageInfo) {
+        debugCurrentState.textContent = "Invalid stage";
+        debugConditions.textContent = "N/A";
+        debugAngles.textContent = "N/A";
+        return;
+      }
       
       // Update current state info
       const stateInfo = {
         'Exercise': document.getElementById('exercise-selector').value,
         'Current Stage': currentStage,
         'Stage Name': stageInfo.name,
+        'Stage Type': stageInfo.type,
         'Current State': exerciseState.currentState,
         'Tolerance': angleTolerance + '°'
       };
       debugCurrentState.textContent = JSON.stringify(stateInfo, null, 2);
 
+      // Get movements from either movements property or hold.joints for hold stages
+      const movements = stageInfo.type === 'hold' 
+        ? Object.entries(stageInfo.hold.joints).reduce((acc, [joint, config]) => {
+            acc[joint] = { start: config.angle, end: config.angle };
+            return acc;
+          }, {})
+        : stageInfo.movements;
+
+      if (!movements) {
+        debugConditions.textContent = "No movements defined for stage";
+        debugAngles.textContent = "N/A";
+        return;
+      }
+
       // Check and display all conditions
       const conditions = [];
       const anglesList = [];
       
-      for (const [joint, targetAngles] of Object.entries(stageInfo.movements)) {
+      for (const [joint, targetAngles] of Object.entries(movements)) {
         const normalizedJoint = joint.replace('_', '-');
         if (!jointConfig[normalizedJoint]?.active) continue;
 
@@ -2450,21 +2557,31 @@
           }
         });
 
-        // Add condition information based on current state
-        if (exerciseState.currentState === ExerciseState.WAITING_FOR_START) {
+        // Add condition information based on current state and stage type
+        if (stageInfo.type === 'hold') {
           conditions.push({
-            description: `${normalizedJoint} at start position (${startAngle}° ±${angleTolerance}°)`,
+            description: `${normalizedJoint} at hold angle (${startAngle}° ±${angleTolerance}°)`,
             met: diffFromStart <= angleTolerance,
             current: Math.round(currentAngle) + '°',
             diff: Math.round(diffFromStart) + '°'
           });
         } else {
-          conditions.push({
-            description: `${normalizedJoint} at end position (${endAngle}° ±${angleTolerance}°)`,
-            met: diffFromEnd <= angleTolerance,
-            current: Math.round(currentAngle) + '°',
-            diff: Math.round(diffFromEnd) + '°'
-          });
+          // For movement stages, show condition based on current state
+          if (exerciseState.currentState === ExerciseState.WAITING_FOR_START) {
+            conditions.push({
+              description: `${normalizedJoint} at start position (${startAngle}° ±${angleTolerance}°)`,
+              met: diffFromStart <= angleTolerance,
+              current: Math.round(currentAngle) + '°',
+              diff: Math.round(diffFromStart) + '°'
+            });
+          } else {
+            conditions.push({
+              description: `${normalizedJoint} at end position (${endAngle}° ±${angleTolerance}°)`,
+              met: diffFromEnd <= angleTolerance,
+              current: Math.round(currentAngle) + '°',
+              diff: Math.round(diffFromEnd) + '°'
+            });
+          }
         }
       }
 
@@ -2477,54 +2594,6 @@
 
       debugConditions.textContent = formattedConditions || "Waiting for pose detection...";
       debugAngles.textContent = JSON.stringify(anglesList, null, 2);
-    }
-
-    // Update the exercise stage handling to initialize state
-    function handleExerciseStage(exercise, stage) {
-      const stageInfo = exercise[stage];
-      const movements = stageInfo.movements;
-      
-      console.log('Exercise Stage:', stageInfo.name);
-      console.log('Movements to configure:', movements);
-      
-      // Reset state machine
-      exerciseState.currentState = ExerciseState.WAITING_FOR_START;
-      exerciseState.lastStateChangeTime = Date.now();
-      
-      // Update stage info display
-      document.getElementById('stage-info').textContent = `Stage: ${stageInfo.name}`;
-      
-      // Update joint configurations
-      for (const [joint, angles] of Object.entries(movements)) {
-        const normalizedJoint = joint.replace('_', '-');
-        console.log('Configuring joint:', normalizedJoint, 'with angles:', angles);
-        
-        if (jointConfig[normalizedJoint]) {
-          // Enable the joint
-          const toggle = document.querySelector(`input[data-joint="${normalizedJoint}"]`);
-          console.log('Found toggle element:', toggle ? 'yes' : 'no');
-          
-          if (toggle) {
-            toggle.checked = true;
-            jointConfig[normalizedJoint].active = true;
-            console.log('Activated joint:', normalizedJoint);
-          } else {
-            console.warn('Toggle element not found for joint:', normalizedJoint);
-          }
-          
-          // Update angles
-          jointConfig[normalizedJoint].alpha = angles.start;
-          jointConfig[normalizedJoint].omega = angles.end;
-          
-          // Update UI
-          updateJointUI(normalizedJoint, angles);
-        } else {
-          console.warn('Joint not found in config:', normalizedJoint);
-        }
-      }
-      
-      // Update debug display
-      updateDebugDisplay();
     }
 
     // Update the main detection loop to handle state transitions
