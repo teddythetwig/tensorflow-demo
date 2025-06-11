@@ -16,29 +16,125 @@
   "wall_squat": [
     {
       "name": "Squat Down",
+      "type": "movement",
       "movements": {
-        "left-hip": {"start": 180, "end": 90},
-        "right-hip": {"start": 180, "end": 90},
-        "left-knee": {"start": 180, "end": 90},
-        "right-knee": {"start": 180, "end": 90}
+        "left_hip": {
+          "start": 180,
+          "end": 90,
+          "required": true
+        },
+        "right_hip": {
+          "start": 180,
+          "end": 90,
+          "required": true
+        },
+        "left_knee": {
+          "start": 180,
+          "end": 90,
+          "required": true
+        },
+        "right_knee": {
+          "start": 180,
+          "end": 90,
+          "required": true
+        }
+      },
+      "tolerance": {
+        "start": 15,
+        "end": 10,
+        "maintain": 15
+      },
+      "visualization": {
+        "show_connected": true,
+        "additional_joints": ["left_ankle", "right_ankle"]
+      },
+      "timeouts": {
+        "lock_time": 500,
+        "max_deviation": 5,
+        "reset_after": 3,
+        "max_attempts": 3,
+        "lost_tracking": 5
       }
     },
     {
-      "name": "Hold Position",
-      "movements": {
-        "left-hip": {"start": 90, "end": 90},
-        "right-hip": {"start": 90, "end": 90},
-        "left-knee": {"start": 90, "end": 90},
-        "right-knee": {"start": 90, "end": 90}
+      "name": "Hold Squat",
+      "type": "hold",
+      "hold": {
+        "duration": 30,
+        "joints": {
+          "left_hip": {
+            "angle": 90,
+            "required": true
+          },
+          "right_hip": {
+            "angle": 90,
+            "required": true
+          },
+          "left_knee": {
+            "angle": 90,
+            "required": true
+          },
+          "right_knee": {
+            "angle": 90,
+            "required": true
+          }
+        }
+      },
+      "tolerance": {
+        "maintain": 15
+      },
+      "visualization": {
+        "show_connected": true,
+        "additional_joints": ["left_ankle", "right_ankle"]
+      },
+      "timeouts": {
+        "lock_time": 500,
+        "max_deviation": 5,
+        "reset_after": 3,
+        "max_attempts": 3,
+        "lost_tracking": 5
       }
     },
     {
       "name": "Return to Standing",
+      "type": "movement",
       "movements": {
-        "left-hip": {"start": 90, "end": 180},
-        "right-hip": {"start": 90, "end": 180},
-        "left-knee": {"start": 90, "end": 180},
-        "right-knee": {"start": 90, "end": 180}
+        "left_hip": {
+          "start": 90,
+          "end": 180,
+          "required": true
+        },
+        "right_hip": {
+          "start": 90,
+          "end": 180,
+          "required": true
+        },
+        "left_knee": {
+          "start": 90,
+          "end": 180,
+          "required": true
+        },
+        "right_knee": {
+          "start": 90,
+          "end": 180,
+          "required": true
+        }
+      },
+      "tolerance": {
+        "start": 15,
+        "end": 10,
+        "maintain": 15
+      },
+      "visualization": {
+        "show_connected": true,
+        "additional_joints": ["left_ankle", "right_ankle"]
+      },
+      "timeouts": {
+        "lock_time": 500,
+        "max_deviation": 5,
+        "reset_after": 3,
+        "max_attempts": 3,
+        "lost_tracking": 5
       }
     }
   ],
@@ -69,6 +165,72 @@
       "movements": {
         "left-hip": {"start": 160, "end": 180},
         "left-knee": {"start": 150, "end": 180}
+      }
+    }
+  ],
+  "straight_leg_raise": [
+    {
+      "name": "Raise Leg",
+      "type": "movement",
+      "movements": {
+        "right_hip": {
+          "start": 180,
+          "end": 90,
+          "required": true
+        },
+        "right_knee": {
+          "start": 180,
+          "end": 180,
+          "required": true
+        }
+      },
+      "tolerance": {
+        "start": 15,
+        "end": 10,
+        "maintain": 15
+      },
+      "visualization": {
+        "show_connected": true,
+        "additional_joints": ["right_ankle"]
+      },
+      "timeouts": {
+        "lock_time": 500,
+        "max_deviation": 5,
+        "reset_after": 3,
+        "max_attempts": 3,
+        "lost_tracking": 5
+      }
+    },
+    {
+      "name": "Lower Leg",
+      "type": "movement",
+      "movements": {
+        "right_hip": {
+          "start": 90,
+          "end": 180,
+          "required": true
+        },
+        "right_knee": {
+          "start": 180,
+          "end": 180,
+          "required": true
+        }
+      },
+      "tolerance": {
+        "start": 15,
+        "end": 10,
+        "maintain": 15
+      },
+      "visualization": {
+        "show_connected": true,
+        "additional_joints": ["right_ankle"]
+      },
+      "timeouts": {
+        "lock_time": 500,
+        "max_deviation": 5,
+        "reset_after": 3,
+        "max_attempts": 3,
+        "lost_tracking": 5
       }
     }
   ]

@@ -1,64 +1,189 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Exercise Motion Schema (MoveNet Compatible)",
+  "title": "Exercise Definition Schema",
+  "description": "Schema for defining exercises with movement and hold stages",
   "type": "object",
   "patternProperties": {
-    "^.*$": {
-      "description": "Exercise name as key",
+    "^[a-zA-Z0-9_-]+$": {
       "type": "array",
+      "description": "Array of exercise stages",
       "items": {
         "type": "object",
+        "required": ["name", "type"],
         "properties": {
           "name": {
             "type": "string",
-            "description": "Descriptive name for this stage of the exercise"
+            "description": "Name of the exercise stage"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["movement", "hold"],
+            "description": "Type of exercise stage"
           },
           "movements": {
             "type": "object",
-            "description": "Joint movements performed in parallel during this stage",
-            "properties": {
-              "nose": {"$ref": "#/definitions/joint_movement"},
-              "left_eye": {"$ref": "#/definitions/joint_movement"},
-              "right_eye": {"$ref": "#/definitions/joint_movement"},
-              "left_ear": {"$ref": "#/definitions/joint_movement"},
-              "right_ear": {"$ref": "#/definitions/joint_movement"},
-              "left_shoulder": {"$ref": "#/definitions/joint_movement"},
-              "right_shoulder": {"$ref": "#/definitions/joint_movement"},
-              "left_elbow": {"$ref": "#/definitions/joint_movement"},
-              "right_elbow": {"$ref": "#/definitions/joint_movement"},
-              "left_wrist": {"$ref": "#/definitions/joint_movement"},
-              "right_wrist": {"$ref": "#/definitions/joint_movement"},
-              "left_hip": {"$ref": "#/definitions/joint_movement"},
-              "right_hip": {"$ref": "#/definitions/joint_movement"},
-              "left_knee": {"$ref": "#/definitions/joint_movement"},
-              "right_knee": {"$ref": "#/definitions/joint_movement"},
-              "left_ankle": {"$ref": "#/definitions/joint_movement"},
-              "right_ankle": {"$ref": "#/definitions/joint_movement"}
+            "description": "Joint movements for movement stage",
+            "patternProperties": {
+              "^(left|right)_(shoulder|elbow|wrist|hip|knee|ankle)$": {
+                "type": "object",
+                "required": ["start", "end", "required"],
+                "properties": {
+                  "start": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 180,
+                    "description": "Starting angle in degrees"
+                  },
+                  "end": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 180,
+                    "description": "Ending angle in degrees"
+                  },
+                  "required": {
+                    "type": "boolean",
+                    "description": "Whether this joint must be tracked"
+                  }
+                }
+              }
             },
-            "additionalProperties": false,
-            "minProperties": 1
+            "additionalProperties": false
+          },
+          "hold": {
+            "type": "object",
+            "description": "Joint positions for hold stage",
+            "required": ["duration", "joints"],
+            "properties": {
+              "duration": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Hold duration in seconds"
+              },
+              "joints": {
+                "type": "object",
+                "patternProperties": {
+                  "^(left|right)_(shoulder|elbow|wrist|hip|knee|ankle)$": {
+                    "type": "object",
+                    "required": ["angle", "required"],
+                    "properties": {
+                      "angle": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 180,
+                        "description": "Target angle to maintain in degrees"
+                      },
+                      "required": {
+                        "type": "boolean",
+                        "description": "Whether this joint must be tracked"
+                      }
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "tolerance": {
+            "type": "object",
+            "description": "Tolerance settings for the stage",
+            "properties": {
+              "start": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 30,
+                "default": 15,
+                "description": "Tolerance in degrees when at starting position"
+              },
+              "end": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 30,
+                "default": 10,
+                "description": "Tolerance in degrees when at ending position"
+              },
+              "maintain": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 30,
+                "default": 15,
+                "description": "Tolerance in degrees while maintaining position"
+              }
+            }
+          },
+          "visualization": {
+            "type": "object",
+            "description": "Visualization settings for the stage",
+            "properties": {
+              "show_connected": {
+                "type": "boolean",
+                "default": true,
+                "description": "Whether to show joints connected to required joints"
+              },
+              "additional_joints": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^(left|right)_(shoulder|elbow|wrist|hip|knee|ankle)$"
+                },
+                "description": "Additional joints to show for context"
+              }
+            }
+          },
+          "timeouts": {
+            "type": "object",
+            "description": "Timeout settings for the stage",
+            "properties": {
+              "lock_time": {
+                "type": "number",
+                "minimum": 0,
+                "default": 500,
+                "description": "Time in ms joint must maintain position to lock"
+              },
+              "max_deviation": {
+                "type": "number",
+                "minimum": 0,
+                "default": 5,
+                "description": "Maximum seconds allowed outside position"
+              },
+              "reset_after": {
+                "type": "number",
+                "minimum": 0,
+                "default": 3,
+                "description": "Seconds of good form to reset deviation timer"
+              },
+              "max_attempts": {
+                "type": "number",
+                "minimum": 1,
+                "default": 3,
+                "description": "Maximum number of attempts before exercise fails"
+              },
+              "lost_tracking": {
+                "type": "number",
+                "minimum": 0,
+                "default": 5,
+                "description": "Seconds before lost tracking causes timeout"
+              }
+            }
           }
         },
-        "required": ["name", "movements"],
-        "additionalProperties": false
+        "dependencies": {
+          "movements": {
+            "properties": {
+              "type": {
+                "const": "movement"
+              }
+            }
+          },
+          "hold": {
+            "properties": {
+              "type": {
+                "const": "hold"
+              }
+            }
+          }
+        }
       }
     }
   },
-  "definitions": {
-    "joint_movement": {
-      "type": "object",
-      "properties": {
-        "start": {
-          "type": "number",
-          "description": "Starting angle in degrees (or position for face keypoints)"
-        },
-        "end": {
-          "type": "number",
-          "description": "Ending angle in degrees (or position for face keypoints)"
-        }
-      },
-      "required": ["start", "end"],
-      "additionalProperties": false
-    }
-  }
+  "additionalProperties": false
 } 
