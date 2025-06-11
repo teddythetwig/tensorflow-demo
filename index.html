@@ -684,6 +684,16 @@
           Adjust how precisely angles need to match their targets. Higher values are more forgiving.
         </div>
       </div>
+      
+      <div class="setting-control">
+        <label for="rolling-average-duration">Rolling Average Duration: <span id="rolling-average-duration-value">5</span>s</label>
+        <div class="slider-container">
+          <input type="range" id="rolling-average-duration" min="1" max="10" value="5" step="0.5">
+        </div>
+        <div class="setting-description">
+          Adjust how long the rolling average window is. Longer duration means smoother movement but more lag.
+        </div>
+      </div>
     </div>
 
     <!-- Debug Information Display -->
@@ -722,7 +732,7 @@
             <label class="toggle-label">
               <input type="checkbox" data-joint="left-shoulder">
               <span class="joint-name">Left Shoulder</span>
-              <span class="color-dot" style="background-color: rgb(16, 185, 129);"></span>
+              <span class="color-dot" style="background-color: rgb(59, 130, 246);"></span>
             </label>
             
             <div class="joint-setting" id="left-shoulder-settings">
@@ -746,7 +756,7 @@
             <label class="toggle-label">
               <input type="checkbox" data-joint="right-shoulder">
               <span class="joint-name">Right Shoulder</span>
-              <span class="color-dot" style="background-color: rgb(249, 115, 22);"></span>
+              <span class="color-dot" style="background-color: rgb(59, 130, 246);"></span>
             </label>
             
             <div class="joint-setting" id="right-shoulder-settings">
@@ -794,7 +804,7 @@
             <label class="toggle-label">
               <input type="checkbox" data-joint="right-elbow">
               <span class="joint-name">Right Elbow</span>
-              <span class="color-dot" style="background-color: rgb(239, 68, 68);"></span>
+              <span class="color-dot" style="background-color: rgb(59, 130, 246);"></span>
             </label>
             
             <div class="joint-setting" id="right-elbow-settings">
@@ -818,7 +828,7 @@
             <label class="toggle-label">
               <input type="checkbox" data-joint="left-hip">
               <span class="joint-name">Left Hip</span>
-              <span class="color-dot" style="background-color: rgb(168, 85, 247);"></span>
+              <span class="color-dot" style="background-color: rgb(59, 130, 246);"></span>
             </label>
             
             <div class="joint-setting" id="left-hip-settings">
@@ -842,7 +852,7 @@
             <label class="toggle-label">
               <input type="checkbox" data-joint="right-hip">
               <span class="joint-name">Right Hip</span>
-              <span class="color-dot" style="background-color: rgb(236, 72, 153);"></span>
+              <span class="color-dot" style="background-color: rgb(59, 130, 246);"></span>
             </label>
             
             <div class="joint-setting" id="right-hip-settings">
@@ -866,7 +876,7 @@
             <label class="toggle-label">
               <input type="checkbox" data-joint="left-knee">
               <span class="joint-name">Left Knee</span>
-              <span class="color-dot" style="background-color: rgb(139, 92, 246);"></span>
+              <span class="color-dot" style="background-color: rgb(59, 130, 246);"></span>
             </label>
             
             <div class="joint-setting" id="left-knee-settings">
@@ -890,7 +900,7 @@
             <label class="toggle-label">
               <input type="checkbox" data-joint="right-knee">
               <span class="joint-name">Right Knee</span>
-              <span class="color-dot" style="background-color: rgb(236, 72, 153);"></span>
+              <span class="color-dot" style="background-color: rgb(59, 130, 246);"></span>
             </label>
             
             <div class="joint-setting" id="right-knee-settings">
@@ -925,14 +935,13 @@
           middle: 11,  // left hip
           end: 13     // left knee
         },
-        color: 'rgb(168, 85, 247)',
+        color: 'rgb(59, 130, 246)',
         repCount: 0,
         hasReachedOmega: false,
         isReadyForNextRep: false,
         currentAngle: 0,
         smoothedAngle: 0,
         active: false,
-        // Add lock state
         lockState: {
           isLocked: false,
           startTime: 0,
@@ -949,14 +958,13 @@
           middle: 12,  // right hip
           end: 14     // right knee
         },
-        color: 'rgb(236, 72, 153)',
+        color: 'rgb(59, 130, 246)',
         repCount: 0,
         hasReachedOmega: false,
         isReadyForNextRep: false,
         currentAngle: 0,
         smoothedAngle: 0,
         active: false,
-        // Add lock state
         lockState: {
           isLocked: false,
           startTime: 0,
@@ -973,14 +981,13 @@
           middle: 13,
           end: 15
         },
-        color: 'rgb(168, 85, 247)',
+        color: 'rgb(59, 130, 246)',
         repCount: 0,
         hasReachedOmega: false,
         isReadyForNextRep: false,
         currentAngle: 0,
         smoothedAngle: 0,
         active: false,
-        // Add lock state
         lockState: {
           isLocked: false,
           startTime: 0,
@@ -997,14 +1004,13 @@
           middle: 14,
           end: 16
         },
-        color: 'rgb(236, 72, 153)',
+        color: 'rgb(59, 130, 246)',
         repCount: 0,
         hasReachedOmega: false,
         isReadyForNextRep: false,
         currentAngle: 0,
         smoothedAngle: 0,
         active: false,
-        // Add lock state
         lockState: {
           isLocked: false,
           startTime: 0,
@@ -1576,69 +1582,35 @@
            Math.sqrt(vectorB.x * vectorB.x + vectorB.y * vectorB.y))
         );
 
-        // Determine the correct direction based on the cross product
-        if (crossProduct >= 0) { // If cross product is positive, we're in the counterclockwise side
-          alphaArcAngle = angleA + Math.PI * (config.alpha / 180);
-          omegaArcAngle = angleA + Math.PI * (config.omega / 180);
-        } else { // If cross product is negative, we're in the clockwise side
-          alphaArcAngle = angleA - Math.PI * (config.alpha / 180);
-          omegaArcAngle = angleA - Math.PI * (config.omega / 180);
-        }
-        
-        // Calculate angle difference considering circle wrapping
-        let angleDiff = omegaArcAngle - alphaArcAngle;
-        if (angleDiff < 0) angleDiff += 2 * Math.PI;
-        let isClockwise = angleDiff > Math.PI;
-
-        // Draw background arc (full range)
-        ctx.beginPath();
-        ctx.arc(
-          middlePoint.x, 
-          middlePoint.y, 
-          radius + 20, 
-          alphaArcAngle, 
-          omegaArcAngle, 
-          isClockwise
-        );
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'; // Dimmer white for background
-        ctx.lineWidth = 8;
-        ctx.stroke();
-
-        // Calculate progress towards target
+        // Calculate color based on proximity to target
         const currentAngle = config.smoothedAngle;
         const targetAngle = config.omega;
-        const startAngle = config.alpha;
-        let progress = Math.abs(currentAngle - startAngle) / Math.abs(targetAngle - startAngle);
-        progress = Math.min(Math.max(progress, 0), 1); // Clamp between 0 and 1
-
-        // Draw progress arc
-        const progressArcEnd = alphaArcAngle + (omegaArcAngle - alphaArcAngle) * progress;
-        ctx.beginPath();
-        ctx.arc(
-          middlePoint.x, 
-          middlePoint.y, 
-          radius + 20, 
-          alphaArcAngle,
-          progressArcEnd,
-          isClockwise
-        );
+        const diffFromTarget = Math.abs(currentAngle - targetAngle);
         
-        // Color based on how close to target
-        const distanceToTarget = Math.abs(currentAngle - targetAngle);
-        let arcColor;
-        if (distanceToTarget <= angleTolerance) {
-          arcColor = 'rgba(74, 222, 128, 0.8)'; // Green when within tolerance
-        } else if (distanceToTarget <= angleTolerance * 2) {
-          arcColor = 'rgba(251, 191, 36, 0.8)'; // Yellow when close
+        // Color transition from blue to green
+        let jointColor;
+        if (diffFromTarget <= angleTolerance) {
+          // Green when within tolerance
+          jointColor = 'rgba(34, 197, 94, 1)';
         } else {
-          arcColor = 'rgba(59, 130, 246, 0.8)'; // Blue for normal progress
+          // Calculate a gradient from blue to green based on proximity
+          const maxDiff = angleTolerance * 3; // Start transition at 3x tolerance
+          const progress = Math.max(0, Math.min(1, 1 - (diffFromTarget / maxDiff)));
+          
+          // RGB values for blue and green
+          const blue = { r: 59, g: 130, b: 246 };
+          const green = { r: 34, g: 197, b: 94 };
+          
+          // Interpolate between blue and green
+          const r = Math.round(blue.r + (green.r - blue.r) * progress);
+          const g = Math.round(blue.g + (green.g - blue.g) * progress);
+          const b = Math.round(blue.b + (green.b - blue.b) * progress);
+          
+          jointColor = `rgba(${r}, ${g}, ${b}, 1)`;
         }
-        ctx.strokeStyle = arcColor;
-        ctx.lineWidth = 8;
-        ctx.stroke();
-        
-        // Draw skeleton lines with the joint's color
-        ctx.strokeStyle = config.color;
+
+        // Draw skeleton lines with the calculated color
+        ctx.strokeStyle = jointColor;
         ctx.lineWidth = 6;
         
         // First segment
@@ -1653,8 +1625,8 @@
         ctx.lineTo(endPoint.x, endPoint.y);
         ctx.stroke();
         
-        // Draw joint keypoints
-        ctx.fillStyle = config.color;
+        // Draw joint keypoints with the same color
+        ctx.fillStyle = jointColor;
         
         // Start point
         ctx.beginPath();
@@ -1671,18 +1643,6 @@
         ctx.arc(endPoint.x, endPoint.y, 8, 0, 2 * Math.PI);
         ctx.fill();
         
-        // Draw angle text near the joint if it's active
-        if (config.active) {
-          ctx.font = '48px Arial';
-          ctx.fillStyle = config.color;
-          ctx.fillText(`${Math.round(config.smoothedAngle)}°`, middlePoint.x + 20, middlePoint.y - 20);
-          
-          // Draw target angle
-          ctx.font = '24px Arial';
-          ctx.fillStyle = arcColor;
-          ctx.fillText(`Target: ${config.omega}°`, middlePoint.x + 20, middlePoint.y + 20);
-        }
-        
         return true;
       }
       
@@ -1692,7 +1652,6 @@
     // Add rolling average functions
     function updateRollingAverage(joint, config, currentAngle) {
       const now = performance.now();
-      const HISTORY_WINDOW = 5000; // 5 second window
       
       // Add new measurement with timestamp
       config.angleHistory.push({
@@ -1702,7 +1661,7 @@
       
       // Remove measurements older than window
       config.angleHistory = config.angleHistory.filter(
-        entry => (now - entry.timestamp) <= HISTORY_WINDOW
+        entry => (now - entry.timestamp) <= rollingAverageDuration
       );
       
       // Calculate weighted average
@@ -1713,7 +1672,7 @@
         config.angleHistory.forEach(entry => {
           // More recent entries get higher weight
           const age = now - entry.timestamp;
-          const weight = 1 - (age / HISTORY_WINDOW);
+          const weight = 1 - (age / rollingAverageDuration);
           
           weightedSum += entry.angle * weight;
           totalWeight += weight;
@@ -2608,6 +2567,20 @@
           break;
       }
     }
+
+    // Add variable for rolling average duration
+    let rollingAverageDuration = 5000; // 5 seconds in milliseconds
+    
+    // Add the rolling average duration control elements
+    const rollingAverageDurationSlider = document.getElementById('rolling-average-duration');
+    const rollingAverageDurationValue = document.getElementById('rolling-average-duration-value');
+    
+    // Setup rolling average duration control event listeners
+    rollingAverageDurationSlider.addEventListener('input', function() {
+      const value = parseFloat(this.value);
+      rollingAverageDuration = value * 1000; // Convert to milliseconds
+      rollingAverageDurationValue.textContent = value;
+    });
   </script>
 </body>
 </html>
