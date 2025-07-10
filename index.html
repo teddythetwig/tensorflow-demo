@@ -648,6 +648,133 @@
     .condition-not-met {
       color: #fb923c;
     }
+
+    /* --- New Mobile Fullscreen Camera Overlay Layout --- */
+    @media (max-width: 768px) {
+      body, html {
+        width: 100vw;
+        height: 100vh;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+      .mobile-fullscreen-camera {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 1;
+        background: #000;
+      }
+      #mobile-webcam, #mobile-canvas {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100vw;
+        height: 100vh;
+        object-fit: cover;
+        z-index: 1;
+        display: block;
+      }
+      #mobile-canvas {
+        pointer-events: none;
+      }
+      .mobile-top-bar {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100vw;
+        height: 56px;
+        z-index: 30;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0,0,0,0.35);
+        padding: 0 12px;
+        box-sizing: border-box;
+      }
+      #mobile-toggle {
+        display: flex;
+        align-items: center;
+        background: rgba(20,20,20,0.5);
+        border-radius: 24px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        margin: 0 auto;
+      }
+      #mobile-toggle button {
+        background: none;
+        border: none;
+        color: #fff;
+        font-size: 1rem;
+        padding: 8px 18px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background 0.2s, color 0.2s;
+      }
+      #mobile-toggle button.active {
+        background: #3b82f6;
+        color: #fff;
+      }
+      #mobile-rep-counter-bar {
+        min-width: 44px;
+        min-height: 44px;
+        background: #2563eb;
+        color: #fff;
+        font-size: 2rem;
+        font-weight: bold;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+        margin-left: 16px;
+        position: absolute;
+        right: 16px;
+        top: 6px;
+      }
+      #mobile-joints-overlay {
+        position: fixed;
+        left: 0; bottom: 0;
+        width: 100vw;
+        min-height: 56px;
+        z-index: 10;
+        background: rgba(0,0,0,0.25);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 0;
+        box-sizing: border-box;
+      }
+      #mobile-options-panel {
+        position: fixed;
+        top: 0; right: -100vw;
+        width: 100vw;
+        height: 100vh;
+        z-index: 20;
+        background: rgba(30,30,30,0.98);
+        transition: right 0.3s cubic-bezier(.4,0,.2,1);
+        box-shadow: -8px 0 24px rgba(0,0,0,0.25);
+        overflow-y: auto;
+        padding: 24px 16px 16px 16px;
+        box-sizing: border-box;
+        color: #fff;
+        padding-top: 56px;
+      }
+      #mobile-options-panel.active {
+        right: 0;
+      }
+      /* Hide all other UI on mobile except overlays and camera */
+      .container > *:not(.mobile-fullscreen-camera):not(.mobile-top-bar):not(#mobile-joints-overlay):not(#mobile-options-panel) {
+        display: none !important;
+      }
+      .global-settings, .debug-panel, .joint-controls {
+        display: none !important;
+      }
+    }
+    @media (min-width: 769px) {
+      #mobile-options-panel, .mobile-top-bar, .mobile-fullscreen-camera, #mobile-joints-overlay {
+        display: none !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -2682,6 +2809,286 @@
       rollingAverageDuration = value * 1000; // Convert to milliseconds
       rollingAverageDurationValue.textContent = value;
     });
+
+    function isMobile() {
+      return window.innerWidth <= 768 || /iPhone|Android|Mobile/i.test(navigator.userAgent);
+    }
+    function showMobileLayout() {
+      var container = document.querySelector('.container');
+      var cam = document.querySelector('.mobile-fullscreen-camera');
+      var topBar = document.querySelector('.mobile-top-bar');
+      var joints = document.getElementById('mobile-joints-overlay');
+      if (container) container.style.display = 'none';
+      if (cam) cam.style.display = 'block';
+      if (topBar) topBar.style.display = 'flex';
+      if (joints) joints.style.display = 'flex';
+    }
+    if (isMobile()) {
+      window.addEventListener('DOMContentLoaded', showMobileLayout);
+      window.addEventListener('DOMContentLoaded', function() {
+        var optionsBtn = document.getElementById('mobile-toggle-options');
+        var cameraBtn = document.getElementById('mobile-toggle-camera');
+        var optionsPanel = document.getElementById('mobile-options-panel');
+        if (optionsBtn && cameraBtn && optionsPanel) {
+          optionsBtn.addEventListener('click', function() {
+            optionsPanel.classList.add('active');
+            optionsBtn.classList.add('active');
+            cameraBtn.classList.remove('active');
+          });
+          cameraBtn.addEventListener('click', function() {
+            optionsPanel.classList.remove('active');
+            cameraBtn.classList.add('active');
+            optionsBtn.classList.remove('active');
+          });
+        }
+      });
+    }
   </script>
+
+  <!-- MOBILE FULLSCREEN CAMERA & OVERLAYS -->
+  <div class="mobile-fullscreen-camera" style="display:none;">
+    <video id="mobile-webcam" autoplay playsinline></video>
+    <canvas id="mobile-canvas"></canvas>
+  </div>
+  <div class="mobile-top-bar" style="display:none;">
+    <div id="mobile-toggle">
+      <button id="mobile-toggle-camera" class="active">Camera</button>
+      <button id="mobile-toggle-options">Options</button>
+    </div>
+    <div id="mobile-rep-counter-bar">0</div>
+  </div>
+  <div id="mobile-joints-overlay" style="display:none;">
+    <!-- Active joints will be rendered here -->
+  </div>
+  <div id="mobile-options-panel">
+    <h2 style="margin-top:0;">Options</h2>
+    <!-- Detection Settings -->
+    <div class="setting-control">
+      <label for="angle-tolerance">Detection Tolerance: <span id="angle-tolerance-value">25</span>°</label>
+      <div class="slider-container">
+        <input type="range" id="angle-tolerance" min="1" max="45" value="25" step="1">
+      </div>
+      <div class="setting-description">
+        Adjust how precisely angles need to match their targets. Higher values are more forgiving.
+      </div>
+    </div>
+    <div class="setting-control">
+      <label for="rolling-average-duration">Rolling Average Duration: <span id="rolling-average-duration-value">1.5</span>s</label>
+      <div class="slider-container">
+        <input type="range" id="rolling-average-duration" min="0.5" max="10" value="1.5" step="0.5">
+      </div>
+      <div class="setting-description">
+        Adjust how long the rolling average window is. Longer duration means smoother movement but more lag.
+      </div>
+    </div>
+    <!-- Exercise Selection -->
+    <div class="exercise-selection">
+      <h3>Select Exercise</h3>
+      <select id="exercise-selector" class="exercise-selector">
+        <option value="">Custom Exercise</option>
+      </select>
+      <div id="stage-info" class="stage-info"></div>
+    </div>
+    <!-- Joint Controls -->
+    <div class="joint-toggles">
+      <h3>Select Joints to Track</h3>
+      <div class="toggle-grid">
+        <!-- Left Shoulder -->
+        <div>
+          <label class="toggle-label">
+            <input type="checkbox" data-joint="left-shoulder">
+            <span class="joint-name">Left Shoulder</span>
+            <span class="color-dot" style="background-color: rgb(59, 130, 246);"></span>
+          </label>
+          <div class="joint-setting" id="left-shoulder-settings">
+            <div class="angle-controls">
+              <div class="slider-labels">
+                <span>Begin: <span id="left-shoulder-alpha-value">90</span>°</span>
+                <span>End: <span id="left-shoulder-omega-value">180</span>°</span>
+              </div>
+              <div class="dual-slider" id="left-shoulder-slider">
+                <div class="slider-track"></div>
+                <div class="slider-range"></div>
+                <div class="slider-handle alpha" data-value="90"></div>
+                <div class="slider-handle omega" data-value="180"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Right Shoulder -->
+        <div>
+          <label class="toggle-label">
+            <input type="checkbox" data-joint="right-shoulder">
+            <span class="joint-name">Right Shoulder</span>
+            <span class="color-dot" style="background-color: rgb(59, 130, 246);"></span>
+          </label>
+          <div class="joint-setting" id="right-shoulder-settings">
+            <div class="angle-controls">
+              <div class="slider-labels">
+                <span>Begin: <span id="right-shoulder-alpha-value">90</span>°</span>
+                <span>End: <span id="right-shoulder-omega-value">180</span>°</span>
+              </div>
+              <div class="dual-slider" id="right-shoulder-slider">
+                <div class="slider-track"></div>
+                <div class="slider-range"></div>
+                <div class="slider-handle alpha" data-value="90"></div>
+                <div class="slider-handle omega" data-value="180"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Left Elbow -->
+        <div>
+          <label class="toggle-label">
+            <input type="checkbox" data-joint="left-elbow" checked>
+            <span class="joint-name">Left Elbow</span>
+            <span class="color-dot" style="background-color: rgb(59, 130, 246);"></span>
+          </label>
+          <div class="joint-setting" id="left-elbow-settings">
+            <div class="angle-controls">
+              <div class="slider-labels">
+                <span>Begin: <span id="left-elbow-alpha-value">160</span>°</span>
+                <span>End: <span id="left-elbow-omega-value">45</span>°</span>
+              </div>
+              <div class="dual-slider" id="left-elbow-slider">
+                <div class="slider-track"></div>
+                <div class="slider-range"></div>
+                <div class="slider-handle alpha" data-value="160"></div>
+                <div class="slider-handle omega" data-value="45"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Right Elbow -->
+        <div>
+          <label class="toggle-label">
+            <input type="checkbox" data-joint="right-elbow">
+            <span class="joint-name">Right Elbow</span>
+            <span class="color-dot" style="background-color: rgb(59, 130, 246);"></span>
+          </label>
+          <div class="joint-setting" id="right-elbow-settings">
+            <div class="angle-controls">
+              <div class="slider-labels">
+                <span>Begin: <span id="right-elbow-alpha-value">160</span>°</span>
+                <span>End: <span id="right-elbow-omega-value">45</span>°</span>
+              </div>
+              <div class="dual-slider" id="right-elbow-slider">
+                <div class="slider-track"></div>
+                <div class="slider-range"></div>
+                <div class="slider-handle alpha" data-value="160"></div>
+                <div class="slider-handle omega" data-value="45"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Left Hip -->
+        <div>
+          <label class="toggle-label">
+            <input type="checkbox" data-joint="left-hip">
+            <span class="joint-name">Left Hip</span>
+            <span class="color-dot" style="background-color: rgb(59, 130, 246);"></span>
+          </label>
+          <div class="joint-setting" id="left-hip-settings">
+            <div class="angle-controls">
+              <div class="slider-labels">
+                <span>Begin: <span id="left-hip-alpha-value">180</span>°</span>
+                <span>End: <span id="left-hip-omega-value">90</span>°</span>
+              </div>
+              <div class="dual-slider" id="left-hip-slider">
+                <div class="slider-track"></div>
+                <div class="slider-range"></div>
+                <div class="slider-handle alpha" data-value="180"></div>
+                <div class="slider-handle omega" data-value="90"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Right Hip -->
+        <div>
+          <label class="toggle-label">
+            <input type="checkbox" data-joint="right-hip">
+            <span class="joint-name">Right Hip</span>
+            <span class="color-dot" style="background-color: rgb(59, 130, 246);"></span>
+          </label>
+          <div class="joint-setting" id="right-hip-settings">
+            <div class="angle-controls">
+              <div class="slider-labels">
+                <span>Begin: <span id="right-hip-alpha-value">180</span>°</span>
+                <span>End: <span id="right-hip-omega-value">90</span>°</span>
+              </div>
+              <div class="dual-slider" id="right-hip-slider">
+                <div class="slider-track"></div>
+                <div class="slider-range"></div>
+                <div class="slider-handle alpha" data-value="180"></div>
+                <div class="slider-handle omega" data-value="90"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Left Knee -->
+        <div>
+          <label class="toggle-label">
+            <input type="checkbox" data-joint="left-knee">
+            <span class="joint-name">Left Knee</span>
+            <span class="color-dot" style="background-color: rgb(59, 130, 246);"></span>
+          </label>
+          <div class="joint-setting" id="left-knee-settings">
+            <div class="angle-controls">
+              <div class="slider-labels">
+                <span>Begin: <span id="left-knee-alpha-value">170</span>°</span>
+                <span>End: <span id="left-knee-omega-value">90</span>°</span>
+              </div>
+              <div class="dual-slider" id="left-knee-slider">
+                <div class="slider-track"></div>
+                <div class="slider-range"></div>
+                <div class="slider-handle alpha" data-value="170"></div>
+                <div class="slider-handle omega" data-value="90"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Right Knee -->
+        <div>
+          <label class="toggle-label">
+            <input type="checkbox" data-joint="right-knee">
+            <span class="joint-name">Right Knee</span>
+            <span class="color-dot" style="background-color: rgb(59, 130, 246);"></span>
+          </label>
+          <div class="joint-setting" id="right-knee-settings">
+            <div class="angle-controls">
+              <div class="slider-labels">
+                <span>Begin: <span id="right-knee-alpha-value">170</span>°</span>
+                <span>End: <span id="right-knee-omega-value">90</span>°</span>
+              </div>
+              <div class="dual-slider" id="right-knee-slider">
+                <div class="slider-track"></div>
+                <div class="slider-range"></div>
+                <div class="slider-handle alpha" data-value="170"></div>
+                <div class="slider-handle omega" data-value="90"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Debug Information -->
+    <div class="debug-panel">
+      <h3>Debug Information</h3>
+      <div class="debug-content">
+        <div class="debug-section">
+          <h4>Current State</h4>
+          <pre id="debug-current-state"></pre>
+        </div>
+        <div class="debug-section">
+          <h4>Transition Conditions</h4>
+          <pre id="debug-conditions"></pre>
+        </div>
+        <div class="debug-section">
+          <h4>Joint Angles</h4>
+          <pre id="debug-angles"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
