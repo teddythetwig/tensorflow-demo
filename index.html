@@ -678,6 +678,34 @@
       #mobile-canvas {
         pointer-events: none;
       }
+      /* Mobile loading styles */
+      #mobile-loading {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        z-index: 10;
+        background: rgba(0,0,0,0.8);
+        padding: 20px;
+        border-radius: 12px;
+        max-width: 90vw;
+      }
+      #mobile-loading .loading-icon {
+        width: 32px;
+        height: 32px;
+        margin-bottom: 8px;
+      }
+      #mobile-loading p {
+        font-size: 14px;
+        margin: 8px 0;
+        color: #fff;
+      }
+      #mobile-loading button {
+        font-size: 14px;
+        padding: 8px 16px;
+        margin-top: 8px;
+      }
       .mobile-top-bar {
         position: fixed;
         top: 0; left: 0;
@@ -1224,14 +1252,19 @@
 
     // Populate exercise selector dropdown
     function populateExerciseSelector() {
-      const selector = document.getElementById('exercise-selector');
+      const desktopSelector = document.getElementById('exercise-selector');
+      const mobileSelector = document.getElementById('exercise-selector-mobile');
+      
       Object.keys(exercises).forEach(exerciseName => {
         const option = document.createElement('option');
         option.value = exerciseName;
         option.textContent = exerciseName.split('_').map(word => 
           word.charAt(0).toUpperCase() + word.slice(1)
         ).join(' ');
-        selector.appendChild(option);
+        
+        // Add to both selectors
+        if (desktopSelector) desktopSelector.appendChild(option.cloneNode(true));
+        if (mobileSelector) mobileSelector.appendChild(option);
       });
     }
 
@@ -1257,8 +1290,9 @@
       }
       
       // Update current state info
+      const exerciseSelector = isMobile() ? document.getElementById('exercise-selector-mobile') : document.getElementById('exercise-selector');
       const stateInfo = {
-        'Exercise': document.getElementById('exercise-selector').value,
+        'Exercise': exerciseSelector ? exerciseSelector.value : '',
         'Current Stage': currentStage,
         'Stage Name': stageInfo.name,
         'Stage Type': stageInfo.type,
@@ -1377,7 +1411,10 @@
       exerciseState.lastStateChangeTime = Date.now();
       
       // Update stage info display
-      document.getElementById('stage-info').textContent = `Stage: ${stageInfo.name}`;
+      const desktopStageInfo = document.getElementById('stage-info');
+      const mobileStageInfo = document.getElementById('stage-info-mobile');
+      if (desktopStageInfo) desktopStageInfo.textContent = `Stage: ${stageInfo.name}`;
+      if (mobileStageInfo) mobileStageInfo.textContent = `Stage: ${stageInfo.name}`;
       
       // Update joint configurations
       for (const [joint, angles] of Object.entries(movements)) {
@@ -1432,7 +1469,12 @@
         // Custom Exercise selected
         currentExercise = null;
         currentStage = 0;
-        document.getElementById('stage-info').textContent = '';
+        
+        // Update both desktop and mobile stage info
+        const desktopStageInfo = document.getElementById('stage-info');
+        const mobileStageInfo = document.getElementById('stage-info-mobile');
+        if (desktopStageInfo) desktopStageInfo.textContent = '';
+        if (mobileStageInfo) mobileStageInfo.textContent = '';
         
         // Show joint toggles
         jointTogglesSection.style.display = 'block';
@@ -1482,6 +1524,14 @@
     document.getElementById('exercise-selector').addEventListener('change', function(e) {
       handleExerciseSelection(e.target.value);
     });
+    
+    // Add mobile exercise selector event listener
+    const mobileExerciseSelector = document.getElementById('exercise-selector-mobile');
+    if (mobileExerciseSelector) {
+      mobileExerciseSelector.addEventListener('change', function(e) {
+        handleExerciseSelection(e.target.value);
+      });
+    }
 
     // DOM Elements
     const webcamEl = document.getElementById('webcam');
@@ -1603,8 +1653,57 @@
     // Canvas setup
     const ctx = canvasEl.getContext('2d');
     
+    // Helper function to draw multiline text
+    function drawMultilineText(ctx, text, x, y, maxWidth, lineHeight) {
+      const words = text.split(' ');
+      let line = '';
+      let currentY = y;
+      
+      for (let i = 0; i < words.length; i++) {
+        const testLine = line + words[i] + ' ';
+        const metrics = ctx.measureText(testLine);
+        const testWidth = metrics.width;
+        
+        if (testWidth > maxWidth && i > 0) {
+          ctx.fillText(line, x, currentY);
+          line = words[i] + ' ';
+          currentY += lineHeight;
+        } else {
+          line = testLine;
+        }
+      }
+      ctx.fillText(line, x, currentY);
+    }
+    
+    // Helper functions to get the active video and canvas elements
+    function getActiveVideoElement() {
+      if (isMobile()) {
+        return document.getElementById('mobile-webcam');
+      } else {
+        return document.getElementById('webcam');
+      }
+    }
+    
+    function getActiveCanvasElement() {
+      if (isMobile()) {
+        return document.getElementById('mobile-canvas');
+      } else {
+        return document.getElementById('canvas');
+      }
+    }
+    
     // Initialize the webcam
     async function setupWebcam() {
+      const videoEl = getActiveVideoElement();
+      
+      // Ensure video element is visible for mobile
+      if (isMobile()) {
+        videoEl.style.display = 'block';
+        videoEl.style.width = '100%';
+        videoEl.style.height = '100%';
+        videoEl.style.objectFit = 'cover';
+      }
+      
       return new Promise((resolve, reject) => {
         navigator.mediaDevices.getUserMedia({
           audio: false,
@@ -1615,11 +1714,11 @@
           }
         })
         .then(stream => {
-          webcamEl.srcObject = stream;
-          webcamEl.onloadedmetadata = () => {
-            webcamEl.width = webcamEl.videoWidth;
-            webcamEl.height = webcamEl.videoHeight;
-            resolve(webcamEl);
+          videoEl.srcObject = stream;
+          videoEl.onloadedmetadata = () => {
+            videoEl.width = videoEl.videoWidth;
+            videoEl.height = videoEl.videoHeight;
+            resolve(videoEl);
           };
         })
         .catch(error => {
@@ -1976,7 +2075,7 @@
                                    (1 - positionSmoothingFactor) * smoothedKeypoints[i].y;
           }
         }
-      }
+      } 
       
       return smoothedKeypoints;
     }
@@ -1989,15 +2088,16 @@
       if (!isRunning) return;
       
       try {
+        const videoEl = getActiveVideoElement();
+        const canvasEl = getActiveCanvasElement();
+        const ctx = canvasEl.getContext('2d');
         // Set canvas dimensions to match video
-        canvasEl.width = webcamEl.width;
-        canvasEl.height = webcamEl.height;
-        
-        // Clear the canvas with transparent background
+        canvasEl.width = videoEl.width;
+        canvasEl.height = videoEl.height;
         ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
         
         // Detect poses
-        const poses = await detector.estimatePoses(webcamEl);
+        const poses = await detector.estimatePoses(videoEl);
         
         // Check if any valid pose was detected
         let validPoseDetected = false;
@@ -2060,10 +2160,10 @@
           const currentTime = Date.now();
           if (currentTime - lastValidPoseTime > messageDelayThreshold) {
             // Show the message if we've waited long enough
-            ctx.font = '24px Arial';
+            ctx.font = isMobile() ? '16px Arial' : '24px Arial';
             ctx.fillStyle = 'white';
             ctx.textAlign = 'center';
-            ctx.fillText('Position your body clearly in view', canvasEl.width / 2, canvasEl.height / 2);
+            drawMultilineText(ctx, 'Position your body clearly in view', canvasEl.width / 2, canvasEl.height / 2, canvasEl.width / 4, 30);
             updateStateDisplay();
             updateDebugDisplay();
           } else if (previousKeypoints) {
@@ -2094,21 +2194,44 @@
     // Start tracking
     async function startTracking() {
       try {
+        // Get the appropriate elements based on device
+        const loadingEl = isMobile() ? document.getElementById('mobile-loading') : document.getElementById('loading');
+        const statusMsg = isMobile() ? 'mobile-status-message' : 'status-message';
+        const startBtn = isMobile() ? document.getElementById('mobile-start-button') : startButtonEl;
+        
         // Hide the start button and show loading
-        startButtonEl.style.display = 'none';
+        startBtn.style.display = 'none';
         loadingEl.style.display = 'flex';
-        statusMessageEl.textContent = 'Setting up webcam...';
+        document.getElementById(statusMsg).textContent = 'Setting up webcam...';
         
         // Setup webcam
         await setupWebcam();
         
         // Load pose model
-        statusMessageEl.textContent = 'Loading pose detection model...';
+        document.getElementById(statusMsg).textContent = 'Loading pose detection model...';
         detector = await loadPoseDetectionModel();
         
         // Hide loading screen, show webcam
         loadingEl.style.display = 'none';
-        webcamEl.style.display = 'block'; // Make sure webcam is visible
+        const videoEl = getActiveVideoElement();
+        const canvasEl = getActiveCanvasElement();
+        
+        // Ensure video and canvas are visible
+        videoEl.style.display = 'block';
+        canvasEl.style.display = 'block';
+        
+        // For mobile, ensure proper styling
+        if (isMobile()) {
+          videoEl.style.width = '100%';
+          videoEl.style.height = '100%';
+          videoEl.style.objectFit = 'cover';
+          canvasEl.style.width = '100%';
+          canvasEl.style.height = '100%';
+          canvasEl.style.position = 'absolute';
+          canvasEl.style.top = '0';
+          canvasEl.style.left = '0';
+          canvasEl.style.pointerEvents = 'none';
+        }
         
         // Create initial angle displays
         createAngleDisplays();
@@ -2118,8 +2241,10 @@
         detectAndRender();
       } catch (error) {
         console.error('Error starting tracking:', error);
-        statusMessageEl.textContent = 'Error starting tracking: ' + error.message;
-        startButtonEl.style.display = 'block';
+        const statusMsg = isMobile() ? 'mobile-status-message' : 'status-message';
+        document.getElementById(statusMsg).textContent = 'Error starting tracking: ' + error.message;
+        const startBtn = isMobile() ? document.getElementById('mobile-start-button') : startButtonEl;
+        startBtn.style.display = 'block';
       }
     }
     
@@ -2128,25 +2253,29 @@
       try {
         // Check if TensorFlow.js is available
         if (typeof tf === 'undefined') {
-          statusMessageEl.textContent = 'TensorFlow.js not loaded. Check your internet connection.';
+          const statusMsg = isMobile() ? 'mobile-status-message' : 'status-message';
+          document.getElementById(statusMsg).textContent = 'TensorFlow.js not loaded. Check your internet connection.';
           return;
         }
         
         // Load exercises first
-        statusMessageEl.textContent = 'Loading exercises...';
+        const statusMsg = isMobile() ? 'mobile-status-message' : 'status-message';
+        document.getElementById(statusMsg).textContent = 'Loading exercises...';
         await loadExercises();
         
         // Show start button
-        statusMessageEl.textContent = 'Ready to start. Click the button below.';
-        startButtonEl.style.display = 'block';
-        startButtonEl.addEventListener('click', startTracking);
+        document.getElementById(statusMsg).textContent = 'Ready to start. Click the button below.';
+        const startBtn = isMobile() ? document.getElementById('mobile-start-button') : startButtonEl;
+        startBtn.style.display = 'block';
+        startBtn.addEventListener('click', startTracking);
         
         // Initialize rep counter
         updateRepCounter();
 
       } catch (error) {
         console.error('Error initializing:', error);
-        statusMessageEl.textContent = 'Error initializing: ' + error.message;
+        const statusMsg = isMobile() ? 'mobile-status-message' : 'status-message';
+        document.getElementById(statusMsg).textContent = 'Error initializing: ' + error.message;
       }
     }
     
@@ -2664,8 +2793,9 @@
       }
       
       // Update current state info
+      const exerciseSelector = isMobile() ? document.getElementById('exercise-selector-mobile') : document.getElementById('exercise-selector');
       const stateInfo = {
-        'Exercise': document.getElementById('exercise-selector').value,
+        'Exercise': exerciseSelector ? exerciseSelector.value : '',
         'Current Stage': currentStage,
         'Stage Name': stageInfo.name,
         'Stage Type': stageInfo.type,
@@ -2843,12 +2973,64 @@
         }
       });
     }
+
+    // Update JS event listeners for tolerance and rolling average sliders to use the correct IDs for mobile/desktop
+    function setupEventListeners() {
+      // Desktop/global controls
+      var angleToleranceSlider = document.getElementById('angle-tolerance');
+      var angleToleranceValue = document.getElementById('angle-tolerance-value');
+      if (angleToleranceSlider && angleToleranceValue) {
+        angleToleranceSlider.addEventListener('input', function() {
+          const value = parseInt(this.value);
+          angleTolerance = value;
+          angleToleranceValue.textContent = value;
+        });
+      }
+      var rollingAverageDurationSlider = document.getElementById('rolling-average-duration');
+      var rollingAverageDurationValue = document.getElementById('rolling-average-duration-value');
+      if (rollingAverageDurationSlider && rollingAverageDurationValue) {
+        rollingAverageDurationSlider.addEventListener('input', function() {
+          const value = parseFloat(this.value);
+          rollingAverageDuration = value * 1000;
+          rollingAverageDurationValue.textContent = value;
+        });
+      }
+      // Mobile controls
+      var angleToleranceSliderMobile = document.getElementById('angle-tolerance-mobile');
+      var angleToleranceValueMobile = document.getElementById('angle-tolerance-value-mobile');
+      if (angleToleranceSliderMobile && angleToleranceValueMobile) {
+        angleToleranceSliderMobile.addEventListener('input', function() {
+          const value = parseInt(this.value);
+          angleTolerance = value;
+          angleToleranceValueMobile.textContent = value;
+        });
+      }
+      var rollingAverageDurationSliderMobile = document.getElementById('rolling-average-duration-mobile');
+      var rollingAverageDurationValueMobile = document.getElementById('rolling-average-duration-value-mobile');
+      if (rollingAverageDurationSliderMobile && rollingAverageDurationValueMobile) {
+        rollingAverageDurationSliderMobile.addEventListener('input', function() {
+          const value = parseFloat(this.value);
+          rollingAverageDuration = value * 1000;
+          rollingAverageDurationValueMobile.textContent = value;
+        });
+      }
+    }
+
+    // Call setupEventListeners() in your init() or DOMContentLoaded
+    window.addEventListener('DOMContentLoaded', setupEventListeners);
   </script>
 
   <!-- MOBILE FULLSCREEN CAMERA & OVERLAYS -->
   <div class="mobile-fullscreen-camera" style="display:none;">
     <video id="mobile-webcam" autoplay playsinline></video>
     <canvas id="mobile-canvas"></canvas>
+    
+    <!-- Mobile Start Button -->
+    <div id="mobile-loading" class="loading" style="display: flex;">
+      <div class="loading-icon"></div>
+      <p id="mobile-status-message">Loading TensorFlow.js...</p>
+      <button id="mobile-start-button" style="display: none;">Start Tracking</button>
+    </div>
   </div>
   <div class="mobile-top-bar" style="display:none;">
     <div id="mobile-toggle">
@@ -2864,18 +3046,18 @@
     <h2 style="margin-top:0;">Options</h2>
     <!-- Detection Settings -->
     <div class="setting-control">
-      <label for="angle-tolerance">Detection Tolerance: <span id="angle-tolerance-value">25</span>°</label>
+      <label for="angle-tolerance-mobile">Detection Tolerance: <span id="angle-tolerance-value-mobile">25</span>°</label>
       <div class="slider-container">
-        <input type="range" id="angle-tolerance" min="1" max="45" value="25" step="1">
+        <input type="range" id="angle-tolerance-mobile" min="1" max="45" value="25" step="1" />
       </div>
       <div class="setting-description">
         Adjust how precisely angles need to match their targets. Higher values are more forgiving.
       </div>
     </div>
     <div class="setting-control">
-      <label for="rolling-average-duration">Rolling Average Duration: <span id="rolling-average-duration-value">1.5</span>s</label>
+      <label for="rolling-average-duration-mobile">Rolling Average Duration: <span id="rolling-average-duration-value-mobile">1.5</span>s</label>
       <div class="slider-container">
-        <input type="range" id="rolling-average-duration" min="0.5" max="10" value="1.5" step="0.5">
+        <input type="range" id="rolling-average-duration-mobile" min="0.5" max="10" value="1.5" step="0.5" />
       </div>
       <div class="setting-description">
         Adjust how long the rolling average window is. Longer duration means smoother movement but more lag.
@@ -2884,10 +3066,10 @@
     <!-- Exercise Selection -->
     <div class="exercise-selection">
       <h3>Select Exercise</h3>
-      <select id="exercise-selector" class="exercise-selector">
+      <select id="exercise-selector-mobile" class="exercise-selector">
         <option value="">Custom Exercise</option>
       </select>
-      <div id="stage-info" class="stage-info"></div>
+      <div id="stage-info-mobile" class="stage-info"></div>
     </div>
     <!-- Joint Controls -->
     <div class="joint-toggles">
@@ -2900,13 +3082,13 @@
             <span class="joint-name">Left Shoulder</span>
             <span class="color-dot" style="background-color: rgb(59, 130, 246);"></span>
           </label>
-          <div class="joint-setting" id="left-shoulder-settings">
+          <div class="joint-setting" id="left-shoulder-settings-mobile">
             <div class="angle-controls">
               <div class="slider-labels">
-                <span>Begin: <span id="left-shoulder-alpha-value">90</span>°</span>
-                <span>End: <span id="left-shoulder-omega-value">180</span>°</span>
+                <span>Begin: <span id="left-shoulder-alpha-value-mobile">90</span>°</span>
+                <span>End: <span id="left-shoulder-omega-value-mobile">180</span>°</span>
               </div>
-              <div class="dual-slider" id="left-shoulder-slider">
+              <div class="dual-slider" id="left-shoulder-slider-mobile">
                 <div class="slider-track"></div>
                 <div class="slider-range"></div>
                 <div class="slider-handle alpha" data-value="90"></div>
@@ -2922,13 +3104,13 @@
             <span class="joint-name">Right Shoulder</span>
             <span class="color-dot" style="background-color: rgb(59, 130, 246);"></span>
           </label>
-          <div class="joint-setting" id="right-shoulder-settings">
+          <div class="joint-setting" id="right-shoulder-settings-mobile">
             <div class="angle-controls">
               <div class="slider-labels">
-                <span>Begin: <span id="right-shoulder-alpha-value">90</span>°</span>
-                <span>End: <span id="right-shoulder-omega-value">180</span>°</span>
+                <span>Begin: <span id="right-shoulder-alpha-value-mobile">90</span>°</span>
+                <span>End: <span id="right-shoulder-omega-value-mobile">180</span>°</span>
               </div>
-              <div class="dual-slider" id="right-shoulder-slider">
+              <div class="dual-slider" id="right-shoulder-slider-mobile">
                 <div class="slider-track"></div>
                 <div class="slider-range"></div>
                 <div class="slider-handle alpha" data-value="90"></div>
@@ -2944,13 +3126,13 @@
             <span class="joint-name">Left Elbow</span>
             <span class="color-dot" style="background-color: rgb(59, 130, 246);"></span>
           </label>
-          <div class="joint-setting" id="left-elbow-settings">
+          <div class="joint-setting" id="left-elbow-settings-mobile">
             <div class="angle-controls">
               <div class="slider-labels">
-                <span>Begin: <span id="left-elbow-alpha-value">160</span>°</span>
-                <span>End: <span id="left-elbow-omega-value">45</span>°</span>
+                <span>Begin: <span id="left-elbow-alpha-value-mobile">160</span>°</span>
+                <span>End: <span id="left-elbow-omega-value-mobile">45</span>°</span>
               </div>
-              <div class="dual-slider" id="left-elbow-slider">
+              <div class="dual-slider" id="left-elbow-slider-mobile">
                 <div class="slider-track"></div>
                 <div class="slider-range"></div>
                 <div class="slider-handle alpha" data-value="160"></div>
@@ -2966,13 +3148,13 @@
             <span class="joint-name">Right Elbow</span>
             <span class="color-dot" style="background-color: rgb(59, 130, 246);"></span>
           </label>
-          <div class="joint-setting" id="right-elbow-settings">
+          <div class="joint-setting" id="right-elbow-settings-mobile">
             <div class="angle-controls">
               <div class="slider-labels">
-                <span>Begin: <span id="right-elbow-alpha-value">160</span>°</span>
-                <span>End: <span id="right-elbow-omega-value">45</span>°</span>
+                <span>Begin: <span id="right-elbow-alpha-value-mobile">160</span>°</span>
+                <span>End: <span id="right-elbow-omega-value-mobile">45</span>°</span>
               </div>
-              <div class="dual-slider" id="right-elbow-slider">
+              <div class="dual-slider" id="right-elbow-slider-mobile">
                 <div class="slider-track"></div>
                 <div class="slider-range"></div>
                 <div class="slider-handle alpha" data-value="160"></div>
@@ -2988,13 +3170,13 @@
             <span class="joint-name">Left Hip</span>
             <span class="color-dot" style="background-color: rgb(59, 130, 246);"></span>
           </label>
-          <div class="joint-setting" id="left-hip-settings">
+          <div class="joint-setting" id="left-hip-settings-mobile">
             <div class="angle-controls">
               <div class="slider-labels">
-                <span>Begin: <span id="left-hip-alpha-value">180</span>°</span>
-                <span>End: <span id="left-hip-omega-value">90</span>°</span>
+                <span>Begin: <span id="left-hip-alpha-value-mobile">180</span>°</span>
+                <span>End: <span id="left-hip-omega-value-mobile">90</span>°</span>
               </div>
-              <div class="dual-slider" id="left-hip-slider">
+              <div class="dual-slider" id="left-hip-slider-mobile">
                 <div class="slider-track"></div>
                 <div class="slider-range"></div>
                 <div class="slider-handle alpha" data-value="180"></div>
@@ -3010,13 +3192,13 @@
             <span class="joint-name">Right Hip</span>
             <span class="color-dot" style="background-color: rgb(59, 130, 246);"></span>
           </label>
-          <div class="joint-setting" id="right-hip-settings">
+          <div class="joint-setting" id="right-hip-settings-mobile">
             <div class="angle-controls">
               <div class="slider-labels">
-                <span>Begin: <span id="right-hip-alpha-value">180</span>°</span>
-                <span>End: <span id="right-hip-omega-value">90</span>°</span>
+                <span>Begin: <span id="right-hip-alpha-value-mobile">180</span>°</span>
+                <span>End: <span id="right-hip-omega-value-mobile">90</span>°</span>
               </div>
-              <div class="dual-slider" id="right-hip-slider">
+              <div class="dual-slider" id="right-hip-slider-mobile">
                 <div class="slider-track"></div>
                 <div class="slider-range"></div>
                 <div class="slider-handle alpha" data-value="180"></div>
@@ -3032,13 +3214,13 @@
             <span class="joint-name">Left Knee</span>
             <span class="color-dot" style="background-color: rgb(59, 130, 246);"></span>
           </label>
-          <div class="joint-setting" id="left-knee-settings">
+          <div class="joint-setting" id="left-knee-settings-mobile">
             <div class="angle-controls">
               <div class="slider-labels">
-                <span>Begin: <span id="left-knee-alpha-value">170</span>°</span>
-                <span>End: <span id="left-knee-omega-value">90</span>°</span>
+                <span>Begin: <span id="left-knee-alpha-value-mobile">170</span>°</span>
+                <span>End: <span id="left-knee-omega-value-mobile">90</span>°</span>
               </div>
-              <div class="dual-slider" id="left-knee-slider">
+              <div class="dual-slider" id="left-knee-slider-mobile">
                 <div class="slider-track"></div>
                 <div class="slider-range"></div>
                 <div class="slider-handle alpha" data-value="170"></div>
@@ -3054,13 +3236,13 @@
             <span class="joint-name">Right Knee</span>
             <span class="color-dot" style="background-color: rgb(59, 130, 246);"></span>
           </label>
-          <div class="joint-setting" id="right-knee-settings">
+          <div class="joint-setting" id="right-knee-settings-mobile">
             <div class="angle-controls">
               <div class="slider-labels">
-                <span>Begin: <span id="right-knee-alpha-value">170</span>°</span>
-                <span>End: <span id="right-knee-omega-value">90</span>°</span>
+                <span>Begin: <span id="right-knee-alpha-value-mobile">170</span>°</span>
+                <span>End: <span id="right-knee-omega-value-mobile">90</span>°</span>
               </div>
-              <div class="dual-slider" id="right-knee-slider">
+              <div class="dual-slider" id="right-knee-slider-mobile">
                 <div class="slider-track"></div>
                 <div class="slider-range"></div>
                 <div class="slider-handle alpha" data-value="170"></div>
