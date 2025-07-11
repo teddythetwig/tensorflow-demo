@@ -1453,7 +1453,8 @@
     function handleExerciseSelection(exerciseName) {
       console.log('Selected exercise:', exerciseName);
       
-      const jointTogglesSection = document.querySelector('.joint-toggles');
+      const desktopJointToggles = document.querySelector('.joint-toggles');
+      const mobileJointToggles = document.querySelector('#mobile-options-panel .joint-toggles');
       
       // Reset rep counter and states
       globalRepCount = 0;
@@ -1476,8 +1477,9 @@
         if (desktopStageInfo) desktopStageInfo.textContent = '';
         if (mobileStageInfo) mobileStageInfo.textContent = '';
         
-        // Show joint toggles
-        jointTogglesSection.style.display = 'block';
+        // Show joint toggles for both desktop and mobile
+        if (desktopJointToggles) desktopJointToggles.style.display = 'block';
+        if (mobileJointToggles) mobileJointToggles.style.display = 'block';
         
         // Reset all joints to default state
         Object.keys(jointConfig).forEach(joint => {
@@ -1502,8 +1504,9 @@
       currentExercise = exercise;
       currentStage = 0;
       
-      // Hide joint toggles for predefined exercises
-      jointTogglesSection.style.display = 'none';
+      // Hide joint toggles for predefined exercises (both desktop and mobile)
+      if (desktopJointToggles) desktopJointToggles.style.display = 'none';
+      if (mobileJointToggles) mobileJointToggles.style.display = 'none';
       
       // Reset all joints first
       Object.keys(jointConfig).forEach(joint => {
@@ -1525,13 +1528,12 @@
       handleExerciseSelection(e.target.value);
     });
     
-    // Add mobile exercise selector event listener
-    const mobileExerciseSelector = document.getElementById('exercise-selector-mobile');
-    if (mobileExerciseSelector) {
-      mobileExerciseSelector.addEventListener('change', function(e) {
+    // Add event delegation for mobile exercise selector
+    document.addEventListener('change', function(e) {
+      if (e.target.id === 'exercise-selector-mobile') {
         handleExerciseSelection(e.target.value);
-      });
-    }
+      }
+    });
 
     // DOM Elements
     const webcamEl = document.getElementById('webcam');
